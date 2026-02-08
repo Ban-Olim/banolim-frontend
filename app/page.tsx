@@ -58,7 +58,7 @@ export default function Home() {
 
         {/* 뒤로가기 버튼 */}
         <div className="w-full flex justify-start mb-8">
-          <button className="text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1 font-medium">
+          <button className="text-gray-500 font-pretandard hover:text-gray-800 transition-colors flex items-center gap-1 font-medium">
             <span className="text-xl">‹</span> 뒤로가기
           </button>
         </div>
