@@ -2,28 +2,94 @@
 
 :root {
   --background: #E6F4FF;
-  /* 하늘색 배경으로 고정 */
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-
+@theme {
+  /* 1. 폰트 변수 연결 */
   --font-sans: var(--font-pretendard), ui-sans-serif, system-ui;
   --font-display: var(--font-cafe24), sans-serif;
 
+  /* 2. 컬러 팔레트 (기존 유지) */
+  --color-green-main: #CEFA93;
+  --color-green-dark: #90EC37;
+  --color-blue-main: #7DF3FF;
+  --color-blue-dark: #00DEF0;
+  --color-pink-main: #FF9E9E;
+  --color-pink-dark: #FF4939;
+  --color-yellow-main: #FCEC90;
+  --color-yellow-dark: #F2B112;
+  --color-gray-900: #1F1F1F;
 }
 
-/* 다크모드에서도 하늘색 배경을 유지하고 싶다면 이 부분은 주석 처리하거나 지워도 됩니다. */
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} 
-*/
+/* 3. 디자인 시스템 타이포그래피 (이미지 수치 적용) */
+@layer utilities {
 
+  /* Title (Cafe24 폰트 권장) */
+  .type-title-42 {
+    font-size: 42px;
+    line-height: 58px;
+    font-weight: 700;
+    /* Bold */
+  }
+
+  .type-title-32 {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
+  }
+
+  .type-title-24 {
+    font-size: 24px;
+    line-height: 36px;
+    font-weight: 700;
+  }
+
+  /* Subtitle (Pretendard) */
+  .type-subtitle-20 {
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+    /* Bold */
+  }
+
+  .type-subtitle-18 {
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+  }
+
+  .type-subtitle-16 {
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 600;
+    /* SemiBold */
+  }
+
+  /* Body (Pretendard) */
+  .type-body-16 {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+    /* Regular */
+  }
+
+  .type-body-14 {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 500;
+    /* Medium */
+  }
+
+  /* Caption & Action */
+  .type-caption-12 {
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 400;
+  }
+}
+
+/* 애니메이션 (기존 유지) */
 @keyframes slide {
   from {
     transform: translateX(-150vw);
@@ -34,14 +100,27 @@
   }
 }
 
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .animate-cloud-fly {
-  animation: slide 30s linear infinite;
+  animation: slide 35s linear infinite;
 }
 
-.animate-cloud-fly-slow {
-  animation: slide 45s linear infinite;
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
-.animate-cloud-fly-fast {
-  animation: slide 20s linear infinite;
+body {
+  background-color: var(--background);
+  color: var(--foreground);
 }
