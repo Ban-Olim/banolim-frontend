@@ -32,15 +32,28 @@ interface ChatLog {
     tags: string[];
 }
 
-// --- 더미 데이터 ---
+// --- 더미 데이터 (모달창 스크롤 테스트용으로 대폭 추가) ---
 const INCORRECT_NOTES: IncorrectNote[] = [
     {
         id: 1, question: "나는 어제 공원에서 친구를 만났어요", correctAnswer: "나는 어제 공원에서 친구를 만났어요", attempts: [
-            [{ text: "나는", type: "subject" }, { text: "공원에서", type: "place" }, { text: "친구를 만났어요", type: "action" }, { text: "어제", type: "time" }],
+            [{ text: "어제", type: "time" }, { text: "나는", type: "subject" }, { text: "친구를 만났어요", type: "action" }, { text: "공원에서", type: "place" }],
+            [{ text: "나는", type: "subject" }, { text: "친구를 만났어요", type: "action" }, { text: "어제", type: "time" }, { text: "공원에서", type: "place" }],
+            [{ text: "나는", type: "subject" }, { text: "어제", type: "time" }, { text: "공원에서", type: "place" }, { text: "친구를 만났어요", type: "action" }],
         ]
     },
-    { id: 2, question: "내일까지 학교에 딱풀을 가져가야 해요", correctAnswer: "내일까지 학교에 딱풀을 가져가야 해요", attempts: [] },
-    { id: 3, question: "오늘은 날씨가 매우 맑고 따뜻해요", correctAnswer: "오늘은 날씨가 매우 맑고 따뜻해요", attempts: [] },
+    {
+        id: 2, question: "내일까지 학교에 딱풀을 가져가야 해요", correctAnswer: "내일까지 학교에 딱풀을 가져가야 해요", attempts: [
+            [{ text: "학교에", type: "place" }, { text: "내일까지", type: "time" }, { text: "딱풀을 가져가야 해요", type: "action" }],
+            [{ text: "내일까지", type: "time" }, { text: "딱풀을 가져가야 해요", type: "action" }, { text: "학교에", type: "place" }],
+            [{ text: "학교에", type: "place" }, { text: "딱풀을 가져가야 해요", type: "action" }, { text: "내일까지", type: "time" }],
+        ]
+    },
+    {
+        id: 3, question: "오늘은 날씨가 매우 맑고 따뜻해요", correctAnswer: "오늘은 날씨가 매우 맑고 따뜻해요", attempts: [
+            [{ text: "매우 맑고 따뜻해요", type: "action" }, { text: "오늘은", type: "time" }, { text: "날씨가", type: "subject" }],
+            [{ text: "날씨가", type: "subject" }, { text: "오늘은", type: "time" }, { text: "매우 맑고 따뜻해요", type: "action" }],
+        ]
+    },
     { id: 4, question: "저녁에 가족들과 맛있는 피자를 먹었어요", correctAnswer: "저녁에 가족들과 맛있는 피자를 먹었어요", attempts: [] },
     { id: 5, question: "주말에는 도서관에서 책을 빌릴 거예요", correctAnswer: "주말에는 도서관에서 책을 빌릴 거예요", attempts: [] },
     { id: 6, question: "동생이랑 같이 자전거를 탔어요", correctAnswer: "동생이랑 같이 자전거를 탔어요", attempts: [] },
@@ -50,12 +63,49 @@ const INCORRECT_NOTES: IncorrectNote[] = [
 const CHAT_LOGS: ChatLog[] = [
     {
         id: 1, name: "김철수", age: "10세", trait: "소심", tags: ["공룡", "로봇", "큰소리 주의"], messages: [
-            { id: 1, sender: 'bot', text: "가나다라가나다라가나다라" }, { id: 2, sender: 'user', text: "무슨 일 있었어?" }
+            { id: 1, sender: 'bot', text: "안녕 철수야! 오늘 하루 어땠어?" },
+            { id: 2, sender: 'user', text: "그냥 그랬어..." },
+            { id: 3, sender: 'bot', text: "무슨 일 있었니? 목소리에 힘이 없네." },
+            { id: 4, sender: 'user', text: "오늘 미술 시간에 공룡 그렸는데, 친구가 안 멋있다고 놀렸어." },
+            { id: 5, sender: 'bot', text: "저런, 많이 속상했겠다. 철수가 그린 공룡은 어떤 공룡이었어?" },
+            { id: 6, sender: 'user', text: "티라노사우루스! 엄청 크고 튼튼한 이빨도 그렸어." },
+            { id: 7, sender: 'bot', text: "우와, 정말 멋진 티라노사우루스였겠다! 친구가 철수의 그림을 자세히 못 봐서 그랬을 거야. 내가 볼 땐 철수가 최고로 잘 그렸어!" },
+            { id: 8, sender: 'user', text: "진짜? 고마워! 내일은 로봇도 그려볼래." },
+            { id: 9, sender: 'bot', text: "좋은 생각이야! 철수가 그릴 로봇도 정말 기대된다!" },
         ]
     },
-    { id: 2, name: "박하린", age: "11세", trait: "활발", tags: ["친구 사귀기", "게임"], messages: [] },
-    { id: 3, name: "이준호", age: "10세", trait: "꼼꼼", tags: ["레고", "퍼즐"], messages: [] },
+    {
+        id: 2, name: "박하린", age: "11세", trait: "활발", tags: ["친구 사귀기", "게임"], messages: [
+            { id: 1, sender: 'bot', text: "하린아 안녕! 주말에 뭐 하면서 놀았어?" },
+            { id: 2, sender: 'user', text: "친구들이랑 놀이터에서 얼음땡 했어!" },
+            { id: 3, sender: 'bot', text: "와, 얼음땡 정말 재밌었겠다! 하린이가 술래였어?" },
+            { id: 4, sender: 'user', text: "아니, 내가 끝까지 안 들키고 도망 다녔지! 엄청 빨랐어 ㅋㅋㅋ" },
+            { id: 5, sender: 'bot', text: "대단한데! 다음에도 친구들이랑 재밌게 놀고 다치지 않게 조심해!" },
+        ]
+    },
+    {
+        id: 3, name: "이준호", age: "10세", trait: "꼼꼼", tags: ["레고", "퍼즐"], messages: [
+            { id: 1, sender: 'bot', text: "준호야, 주말인데 뭐 하고 있어?" },
+            { id: 2, sender: 'user', text: "어제 산 레고 성 조립하고 있어. 근데 조각이 너무 많아서 헷갈려." },
+            { id: 3, sender: 'bot', text: "천천히 설명서 보고 색깔별로 분류해 보면 어떨까? 준호는 꼼꼼하니까 금방 할 수 있을 거야!" },
+            { id: 4, sender: 'user', text: "오! 그렇게 해볼게. 다 만들고 보여줄게!" },
+        ]
+    },
     { id: 4, name: "최민지", age: "9세", trait: "호기심 많음", tags: ["우주", "그림 그리기"], messages: [] },
+];
+
+// 레벨 1~10 데이터
+const LEVELS = [
+    { lv: 1, name: "옹알이" },
+    { lv: 2, name: "단어 봇" },
+    { lv: 3, name: "짧은 문장러" },
+    { lv: 4, name: "대화 초보" },
+    { lv: 5, name: "수다쟁이" },
+    { lv: 6, name: "가나다라" },
+    { lv: 7, name: "실전 대화러", isCurrent: true },
+    { lv: 8, name: "상황 마스터", isNext: true },
+    { lv: 9, name: "대화 리더" },
+    { lv: 10, name: "눈치코치 MVP" },
 ];
 
 const getWordColorClass = (type: WordType) => {
@@ -68,14 +118,14 @@ const getWordColorClass = (type: WordType) => {
     }
 };
 
-// [수정] 뚜렷하고 선명한 구름 모양을 만들기 위한 컴포넌트 추가
+// 흐릿한(blur) 효과가 없는 뚜렷한 단색 구름 SVG 컴포넌트
 const Cloud = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 100 60" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="20" cy="35" r="15" />
-        <circle cx="40" cy="25" r="20" />
-        <circle cx="65" cy="25" r="22" />
-        <circle cx="85" cy="35" r="15" />
-        <rect x="20" y="30" width="65" height="20" />
+        <circle cx="25" cy="35" r="15" />
+        <circle cx="45" cy="25" r="20" />
+        <circle cx="70" cy="25" r="22" />
+        <circle cx="85" cy="38" r="12" />
+        <rect x="25" y="30" width="60" height="20" />
     </svg>
 );
 
@@ -84,10 +134,10 @@ export default function DashboardPage() {
     const [selectedChat, setSelectedChat] = useState<ChatLog | null>(null);
 
     const [selectedYear, setSelectedYear] = useState(2026);
-    const [selectedMonth, setSelectedMonth] = useState(3);
+    const [selectedMonth, setSelectedMonth] = useState(1); // 1월 기본
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const attendanceDays = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 23, 24, 25, 26, 27, 30, 31];
+    const attendanceDays = [8, 9, 15, 16];
 
     const getCalendarDays = (year: number, month: number) => {
         const firstDay = new Date(year, month - 1, 1).getDay();
@@ -102,17 +152,14 @@ export default function DashboardPage() {
     const calendarDays = getCalendarDays(selectedYear, selectedMonth);
 
     return (
-        // 배경: 화사한 연노랑
         <div className="h-screen bg-[#FFFBEB] flex flex-col items-center py-5 px-8 relative font-sans overflow-hidden">
 
-            {/* [수정] 뿌연 효과(blur)를 완전히 지우고, 뚜렷한 갈색(베이지) 구름들을 뒷배경으로 배치 */}
+            {/* 뚜렷하고 귀여운 베이지/갈색 구름 배경 */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-                <Cloud className="absolute top-[5%] left-[5%] w-[300px] text-[#E8D29C] opacity-80" />
-                <Cloud className="absolute -top-[5%] right-[20%] w-[450px] text-[#E8D29C] opacity-80" />
-                <Cloud className="absolute top-[40%] -right-[5%] w-[350px] text-[#E8D29C] opacity-80" />
-                <Cloud className="absolute bottom-[5%] left-[25%] w-[400px] text-[#E8D29C] opacity-80" />
-                <Cloud className="absolute -bottom-[10%] right-[30%] w-[550px] text-[#E8D29C] opacity-80" />
-                <Cloud className="absolute top-[60%] -left-[10%] w-[350px] text-[#E8D29C] opacity-80" />
+                <Cloud className="absolute top-[5%] left-[5%] w-[350px] text-[#FDE68A] opacity-50" />
+                <Cloud className="absolute top-[20%] right-[10%] w-[450px] text-[#FDE68A] opacity-50" />
+                <Cloud className="absolute bottom-[10%] left-[20%] w-[400px] text-[#FDE68A] opacity-50" />
+                <Cloud className="absolute -bottom-[5%] right-[5%] w-[500px] text-[#FDE68A] opacity-50" />
             </div>
 
             {/* --- 상단 헤더 --- */}
@@ -128,11 +175,11 @@ export default function DashboardPage() {
                 </button>
             </header>
 
-            {/* --- 메인 보드 (순백색 바탕) --- */}
+            {/* --- 메인 보드 --- */}
             <main className="w-full max-w-[1500px] bg-white rounded-[36px] p-6 lg:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.04)] flex flex-col lg:flex-row gap-8 z-10 flex-1 min-h-0 relative border border-gray-100">
 
                 {/* ========================================= */}
-                {/* 1. 왼쪽 영역 (학습 달력) - flex-[1.2] */}
+                {/* 1. 왼쪽 영역 (학습 달력) */}
                 {/* ========================================= */}
                 <section className="w-full lg:flex-[1.2] flex flex-col h-full min-h-0 relative z-10 bg-white">
 
@@ -140,14 +187,13 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2">
                             <span className="text-[#FBBF24] text-xl">📅</span>
                             <h2 className="text-[17px] font-extrabold text-gray-800">학습 달력</h2>
-                            {/* 연속 5일 배지 */}
-                            <span className="ml-2 bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm flex items-center">
+                            <span className="ml-2 bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[11px] font-bold px-3 py-1 rounded-[8px] shadow-sm">
                                 연속 5일 🔥
                             </span>
                         </div>
 
                         {/* 드롭다운 메뉴 */}
-                        <div className="flex items-center gap-2 text-gray-700">
+                        <div className="flex items-center gap-2 text-gray-700 relative">
                             <span className="font-extrabold text-[15px]">{selectedYear}년</span>
                             <div className="relative">
                                 <button
@@ -190,21 +236,18 @@ export default function DashboardPage() {
                         ))}
                     </div>
 
-                    {/* 달력 그리드 */}
                     <div className="grid grid-cols-7 grid-rows-5 gap-3 flex-1 min-h-0">
                         {calendarDays.map((date, i) => {
                             const isAttended = date && attendanceDays.includes(date);
                             return (
                                 <div key={i} className={`relative w-full aspect-square rounded-[14px] flex items-center justify-center bg-white
-                   ${date ? 'border-[2px] border-[#EAF5D4]' : 'border-2 border-transparent'}
-                 `}>
-
+                                    ${date ? 'border-[2px] border-[#EAF5D4]' : 'border-2 border-transparent'}
+                                `}>
                                     {date && (
                                         <span className="absolute top-1.5 left-2 sm:top-2 sm:left-2.5 text-[11px] sm:text-[13px] font-extrabold text-gray-300 z-10">
                                             {date}
                                         </span>
                                     )}
-
                                     {isAttended && (
                                         <div className="absolute inset-0 m-auto w-[82%] h-[82%] rounded-full bg-[#F2FEE5] border-[3px] border-[#CEFA93] flex flex-col items-center justify-center shadow-sm z-20">
                                             <span className="text-[#65A30D] font-extrabold text-[10px] sm:text-[11px] xl:text-[12px] leading-tight mt-0.5">출석</span>
@@ -218,11 +261,9 @@ export default function DashboardPage() {
                 </section>
 
                 {/* ========================================= */}
-                {/* 2. 중앙 영역 (오답노트 & 챗봇 로그) - flex-[1] */}
+                {/* 2. 중앙 영역 (오답노트 & 챗봇 로그) */}
                 {/* ========================================= */}
                 <section className="w-full lg:flex-[1] flex flex-col gap-6 h-full min-h-0 px-2 lg:px-0 z-10">
-
-                    {/* 오답노트 */}
                     <div className="flex flex-col flex-1 min-h-0">
                         <div className="shrink-0 mb-2">
                             <div className="flex items-center gap-2 mb-1">
@@ -232,7 +273,6 @@ export default function DashboardPage() {
                             <p className="text-[11px] text-gray-400 mb-4 ml-8 font-medium">내가 틀렸던 문제를 보여줘요!</p>
                             <div className="text-[12px] font-bold text-gray-400 mb-3 ml-2 border-b border-gray-50 pb-2">문장 분해 문제</div>
                         </div>
-
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2.5">
                             {INCORRECT_NOTES.map((note, idx) => (
                                 <button key={note.id} onClick={() => setSelectedNote(note)} className="flex items-center gap-3 w-full group shrink-0">
@@ -249,13 +289,11 @@ export default function DashboardPage() {
 
                     <div className="border-b border-gray-100 w-full shrink-0"></div>
 
-                    {/* 챗봇 로그내역 */}
                     <div className="flex flex-col flex-[0.8] min-h-0">
                         <div className="shrink-0 flex items-center gap-2 mb-4">
                             <span className="text-[#FBBF24] text-[22px]">💬</span>
                             <h2 className="text-[17px] font-extrabold text-gray-800">챗봇 로그내역</h2>
                         </div>
-
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 pb-1">
                             {CHAT_LOGS.map((log) => (
                                 <div key={log.id} className="border border-gray-100 rounded-[20px] p-4.5 shrink-0 bg-white shadow-sm">
@@ -283,16 +321,15 @@ export default function DashboardPage() {
                 </section>
 
                 {/* ========================================= */}
-                {/* 3. 오른쪽 영역 (나의 등급 & 캐릭터) - flex-[0.9] */}
+                {/* 3. 오른쪽 영역 (나의 등급 & 캐릭터) */}
                 {/* ========================================= */}
                 <section className="w-full lg:flex-[0.9] flex flex-col gap-6 h-full min-h-0 relative z-10">
 
-                    {/* 노란색 마스킹 테이프 장식 */}
-                    <div className="absolute -top-3 right-6 w-3.5 h-12 bg-[#FDE047] rounded-sm transform rotate-6 z-20 shadow-sm opacity-90"></div>
-                    <div className="absolute -top-3 left-[40%] w-3.5 h-12 bg-[#FDE047] rounded-sm transform -rotate-3 z-20 shadow-sm opacity-90"></div>
+                    {/* 노란색 고리 장식 */}
+                    <div className="absolute -top-4 left-6 w-3.5 h-10 bg-[#FDE047] rounded-full z-20 shadow-sm"></div>
+                    <div className="absolute -top-4 right-6 w-3.5 h-10 bg-[#FDE047] rounded-full z-20 shadow-sm"></div>
 
-                    {/* 나의 등급 */}
-                    <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col shrink-0 relative z-10">
+                    <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col shrink-0 relative z-10 pt-8">
                         <h2 className="text-[16px] font-extrabold text-gray-800 mb-5">나의 등급</h2>
                         <div className="flex gap-2 mb-6">
                             <span className="bg-[#FFE4E6] text-[#EF4444] text-[10px] font-bold px-3 py-1.5 rounded-full border border-[#FECDD3]">연속 5일 🔥</span>
@@ -318,40 +355,48 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* 나의 캐릭터 */}
                     <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex-1 flex flex-col min-h-0 relative z-10">
                         <h2 className="text-[16px] font-extrabold text-gray-800 mb-6 shrink-0">나의 캐릭터</h2>
-                        <div className="flex justify-between flex-1 min-h-0 gap-4">
+                        <div className="flex justify-between flex-1 min-h-0 gap-3 xl:gap-4">
 
-                            <div className="flex flex-col gap-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
-                                <div className="flex items-center gap-3 shrink-0 opacity-60">
-                                    <div className="bg-[#F3F4F6] text-gray-400 text-[10px] font-bold px-3 py-1.5 rounded-xl border border-gray-200">Lv. 6</div>
-                                    <span className="text-gray-500 text-[12px] font-bold">가나다라</span>
-                                </div>
-                                {/* 현재 레벨 */}
-                                <div className="flex items-center gap-3 relative shrink-0">
-                                    <div className="bg-[#FDE047] text-[#854D0E] text-[10px] font-extrabold px-3 py-1.5 rounded-xl shadow-sm border border-[#FACC15]">Lv. 7</div>
-                                    <span className="text-gray-800 text-[12px] font-extrabold">실전 대화러</span>
-                                    <div className="absolute right-0 bg-[#FDE047] text-[#854D0E] text-[9px] font-bold px-2 py-0.5 rounded-md shadow-sm">현재</div>
-                                </div>
-                                {/* 다음 목표 */}
-                                <div className="flex items-center gap-3 relative shrink-0">
-                                    <div className="bg-white border-2 border-dashed border-[#FDE047] text-gray-400 text-[10px] font-bold px-3 py-1.5 rounded-xl">Lv. 8</div>
-                                    <span className="text-gray-400 text-[12px] font-bold">상황 마스터</span>
-                                    <div className="absolute right-0 bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[9px] font-bold px-2 py-0.5 rounded-md shadow-sm hidden xl:block">다음 목표</div>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <div className="bg-white border border-gray-200 text-gray-400 text-[10px] font-bold px-3 py-1.5 rounded-xl">Lv. 9</div>
-                                    <span className="text-gray-400 text-[12px] font-bold">대화 리더</span>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <div className="bg-white border border-gray-200 text-gray-400 text-[10px] font-bold px-3 py-1.5 rounded-xl">Lv. 10</div>
-                                    <span className="text-gray-400 text-[12px] font-bold">눈치코치 MVP</span>
-                                </div>
+                            {/* 레벨 1~10 스크롤 리스트 */}
+                            <div className="flex flex-col gap-2 flex-[1.2] overflow-y-auto custom-scrollbar pr-1 pb-2">
+                                {LEVELS.map((item) => {
+                                    let bgClass = "bg-[#F3F4F6] text-gray-400";
+                                    let textClass = "text-gray-500 font-bold";
+                                    let lvTextClass = "text-gray-400";
+
+                                    if (item.isCurrent) {
+                                        bgClass = "bg-[#FDE047] border border-[#FACC15] shadow-sm";
+                                        textClass = "text-gray-800 font-extrabold";
+                                        lvTextClass = "text-[#854D0E]";
+                                    } else if (item.isNext) {
+                                        bgClass = "bg-white border border-[#FDE047]";
+                                        textClass = "text-gray-400 font-bold";
+                                    } else if (item.lv > 8) {
+                                        bgClass = "bg-white border border-gray-200";
+                                    }
+
+                                    return (
+                                        <div key={item.lv} className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl shrink-0 gap-1.5 ${bgClass}`}>
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className={`font-extrabold text-[10px] ${lvTextClass} shrink-0 whitespace-nowrap`}>Lv. {item.lv}</span>
+                                                <span className={`text-[11px] ${textClass} truncate`}>{item.name}</span>
+                                            </div>
+
+                                            {item.isCurrent && (
+                                                <span className="bg-[#FDE047] text-[#854D0E] text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm shrink-0">현재</span>
+                                            )}
+                                            {item.isNext && (
+                                                <span className="bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm shrink-0 hidden sm:block">다음 목표</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* 회색 캐릭터 박스 */}
-                            <div className="w-[45%] h-full min-h-[160px] bg-[#E5E7EB] rounded-[20px] flex items-center justify-center shrink-0 border-2 border-white shadow-inner">
+                            <div className="flex-[0.8] h-full min-h-[160px] bg-[#E5E7EB] rounded-[20px] flex items-center justify-center shrink-0 border-2 border-white shadow-inner">
                                 <span className="text-gray-400 font-extrabold text-sm">캐릭터</span>
                             </div>
                         </div>
