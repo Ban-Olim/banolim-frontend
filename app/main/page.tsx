@@ -43,7 +43,7 @@ export default function Main() {
               <Image
                 src="/imoge1.png" // 다운로드한 이미지 경로
                 alt="연습 아이콘"
-                width={80}
+                width={100}
                 height={80}
                 className="object-contain"
               />
@@ -55,7 +55,15 @@ export default function Main() {
             title="눈치코치"
             bgColor="bg-blue-main"
             borderColor="border-blue-dark"
-            icon="😁"
+            icon={
+              <Image
+                src="/imoge2.png" // 다운로드한 이미지 경로
+                alt="연습 아이콘"
+                width={120}
+                height={80}
+                className="object-contain"
+              />
+            }
             href="/coach"
           />
 
@@ -63,7 +71,15 @@ export default function Main() {
             title="나만의 단어장"
             bgColor="bg-[#FFD1D9]"
             borderColor="border-pink-dark"
-            icon="😍"
+            icon={
+              <Image
+                src="/imoge3.png" // 다운로드한 이미지 경로
+                alt="연습 아이콘"
+                width={120}
+                height={80}
+                className="object-contain"
+              />
+            }
             href="/vocabulary"
           />
 
@@ -71,7 +87,15 @@ export default function Main() {
             title="대시보드"
             bgColor="bg-yellow-main"
             borderColor="border-yellow-dark"
-            icon="😎"
+            icon={
+              <Image
+                src="/imoge4.png" // 다운로드한 이미지 경로
+                alt="연습 아이콘"
+                width={120}
+                height={80}
+                className="object-contain"
+              />
+            }
             href="/dashboard"
           />
         </div>

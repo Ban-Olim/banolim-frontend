@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from "next/image";
 
 // --- 타입 정의 ---
 type WordType = 'subject' | 'time' | 'place' | 'action';
@@ -164,8 +165,14 @@ export default function DashboardPage() {
 
             {/* --- 상단 헤더 --- */}
             <header className="w-full max-w-[1500px] bg-white rounded-full py-3 px-6 flex justify-between items-center shadow-sm z-10 mb-5 shrink-0 border border-gray-100">
-                <div className="bg-[#CEFA93] text-green-900 font-extrabold px-8 py-2.5 rounded-full text-sm">
-                    로고
+                <div className="relative w-32 h-10"> {/* 원하는 크기에 맞춰 w, h 조절 */}
+                    <Image
+                        src="/logo.jpg"        // public 폴더에 넣은 실제 파일명으로 변경하세요
+                        alt="로고"
+                        fill                   // 부모 div 크기에 맞춤
+                        className="object-contain object-left" // 이미지 비율 유지
+                        priority               // 로고는 최우선 로딩
+                    />
                 </div>
                 <div className="font-extrabold text-xl text-gray-700 tracking-wide">
                     대시보드
