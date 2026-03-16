@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import MenuCard from "../components/MenuCard";
+import MenuCard from "../../components/MenuCard";
 
 const Cloud = ({
   className,
