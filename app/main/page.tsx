@@ -10,11 +10,11 @@ export default function Main() {
       {/* 배경 이미지 레이어 */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <Image
-          src="/background.jpg" // 여기에 다운로드한 이미지 파일명을 넣으세요 (예: /bg.png)
+          src="/background.jpg"
           alt="배경 이미지"
           fill
           priority
-          className=" object-cover opacity-40" // opacity로 배경의 밝기를 조절하세요 (0~100)
+          className=" object-cover opacity-100" // opacity로 배경의 밝기를 조절하세요 (0~100)
         />
         {/* 하단 그라데이션 (선택 사항: 하단을 부드럽게 처리하고 싶을 때 유지) */}
         <div className="absolute bottom-0 w-full h-40 bg-gradient-to-t from-[#E6F4FF] to-transparent" />
@@ -39,7 +39,15 @@ export default function Main() {
             title="문장 분해 연습"
             bgColor="bg-green-main"
             borderColor="border-green-dark"
-            icon="😊"
+            icon={
+              <Image
+                src="/imoge1.png" // 다운로드한 이미지 경로
+                alt="연습 아이콘"
+                width={80}
+                height={80}
+                className="object-contain"
+              />
+            }
             href="/practice"
           />
 
