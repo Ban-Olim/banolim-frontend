@@ -58,10 +58,10 @@ export default function Main() {
             icon={
               <Image
                 src="/imoge2.png" // 다운로드한 이미지 경로
-                alt="연습 아이콘"
-                width={120}
+                alt="눈치코치 아이콘"
+                width={100}
                 height={80}
-                className="object-contain"
+                className="object-contain scale-[1.25]" 
               />
             }
             href="/coach"
@@ -74,10 +74,10 @@ export default function Main() {
             icon={
               <Image
                 src="/imoge3.png" // 다운로드한 이미지 경로
-                alt="연습 아이콘"
-                width={120}
+                alt="단어장 아이콘"
+                width={100}
                 height={80}
-                className="object-contain"
+                className="object-contain scale-[1.3]" // 여백 보정 확대
               />
             }
             href="/vocabulary"
@@ -90,10 +90,10 @@ export default function Main() {
             icon={
               <Image
                 src="/imoge4.png" // 다운로드한 이미지 경로
-                alt="연습 아이콘"
-                width={120}
+                alt="대시보드 아이콘"
+                width={100}
                 height={80}
-                className="object-contain"
+                className="object-contain scale-[1.25]" // 여백 보정 확대
               />
             }
             href="/dashboard"

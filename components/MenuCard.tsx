@@ -28,11 +28,11 @@ export default function MenuCard({ title, bgColor, borderColor, icon, href }: Me
         group cursor-pointer
       `}
         >
-            <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white/90 rounded-full flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-                {/* 이모지 크기 확대 */}
-                <span className="text-6xl sm:text-7xl text-gray-800 leading-none">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white/90 rounded-full flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300 overflow-hidden relative">
+                {/* 상위에서 전달한 원본 width/height가 존중되면서도, 원경계를 침범하지 않게 설정 */}
+                <div className="flex items-center justify-center w-[90%] h-[90%] [&_img]:!object-contain">
                     {icon}
-                </span>
+                </div>
             </div>
 
             {/* [핵심 수정] 디자인 시스템 Title 32 Bold 적용 */}
