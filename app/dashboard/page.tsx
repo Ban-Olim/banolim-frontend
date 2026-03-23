@@ -139,9 +139,9 @@ export default function DashboardPage() {
     const [selectedMonth, setSelectedMonth] = useState(1); // 1월 기본
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const [hoveredLevel, setHoveredLevel] = useState<number | null>(null);
+    const [clickedLevel, setClickedLevel] = useState<number | null>(null);
     const currentLevel = LEVELS.find(l => l.isCurrent)?.lv || 0;
-    const displayLevel = hoveredLevel !== null ? hoveredLevel : currentLevel;
+    const displayLevel = clickedLevel !== null ? clickedLevel : currentLevel;
 
     const attendanceDays = [8, 9, 15, 16];
 
@@ -397,8 +397,7 @@ export default function DashboardPage() {
                                         <div 
                                             key={item.lv} 
                                             className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl shrink-0 gap-1.5 cursor-pointer hover:scale-[1.02] transition-all ${bgClass}`}
-                                            onMouseEnter={() => setHoveredLevel(item.lv)}
-                                            onMouseLeave={() => setHoveredLevel(null)}
+                                            onClick={() => setClickedLevel(clickedLevel === item.lv ? null : item.lv)}
                                         >
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className={`font-extrabold text-[10px] ${lvTextClass} shrink-0 whitespace-nowrap`}>Lv. {item.lv}</span>

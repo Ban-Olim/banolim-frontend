@@ -48,7 +48,7 @@ export default function Main() {
                 className="object-contain"
               />
             }
-            href="/practice"
+            href="/sentence"
           />
 
           <MenuCard
@@ -61,10 +61,10 @@ export default function Main() {
                 alt="눈치코치 아이콘"
                 width={100}
                 height={80}
-                className="object-contain scale-[1.25]" 
+                className="object-contain scale-[1.25]"
               />
             }
-            href="/coach"
+            href="/nunchikochi"
           />
 
           <MenuCard
@@ -75,7 +75,7 @@ export default function Main() {
               <Image
                 src="/imoge3.png" // 다운로드한 이미지 경로
                 alt="단어장 아이콘"
-                width={100}
+                width={75}
                 height={80}
                 className="object-contain scale-[1.3]" // 여백 보정 확대
               />
