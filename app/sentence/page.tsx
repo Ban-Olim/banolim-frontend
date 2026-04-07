@@ -1,16 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
 import FeedbackModal from "../../components/sentence/FeedbackModal";
-
-interface Slot {
-  slotOrder: number;
-  slotLabel: string;
-  correctAnswer: string;
-  hint: string;
-}
+import { api } from "../../lib/api";
 
 interface WordChip {
   id: string;
@@ -18,7 +13,13 @@ interface WordChip {
   colorClass: string;
 }
 
-type SlotState = Slot & { currentWord: WordChip | null };
+type SlotState = {
+  slotOrder: number;
+  slotLabel: string;
+  correctAnswer: string;
+  hint: string;
+  currentWord: WordChip | null;
+};
 
 const OPTION_COLORS = [
   "bg-[#FFF8D6] border-[#FCEC90]",
@@ -27,40 +28,7 @@ const OPTION_COLORS = [
   "bg-[#E1FCFF] border-[#7DF2FF]",
 ];
 
-const MOCK_PROBLEM = {
-  sentenceProblemId: 15,
-  sentenceText: "어제 동생이 사탕을 받았다.",
-  sentenceAudioUrl: "https://example.com/dummy-audio.mp3",
-  sentenceData: {
-    slots: [
-      {
-        slotOrder: 1,
-        slotLabel: "어떤/언제",
-        correctAnswer: "어제",
-        hint: "어떤/언제",
-      },
-      {
-        slotOrder: 2,
-        slotLabel: "누가",
-        correctAnswer: "동생이",
-        hint: "누가",
-      },
-      {
-        slotOrder: 3,
-        slotLabel: "무엇을",
-        correctAnswer: "사탕을",
-        hint: "무엇을",
-      },
-      {
-        slotOrder: 4,
-        slotLabel: "했나요",
-        correctAnswer: "받았다",
-        hint: "했나요",
-      },
-    ],
-    options: ["사탕을", "동생이", "어제", "받았다"],
-  },
-};
+const DIFFICULTY = 2;
 
 export default function SentencePage() {
   const [isDictOpen, setIsDictOpen] = useState(false);
@@ -68,22 +36,28 @@ export default function SentencePage() {
     "none" | "correct" | "incorrect" | "hint"
   >("none");
   const [draggedWord, setDraggedWord] = useState<WordChip | null>(null);
+  const [availableWords, setAvailableWords] = useState<WordChip[]>([]);
+  const [slots, setSlots] = useState<SlotState[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const problem = MOCK_PROBLEM;
+  const { data: problem, isLoading, isError } = useQuery({
+    queryKey: ["sentencePractice", DIFFICULTY],
+    queryFn: () => api.getSentencePractice(DIFFICULTY),
+  });
 
-  const initialWords: WordChip[] = problem.sentenceData.options.map(
-    (text, i) => ({
+  // 문제 로드 시 슬롯/단어 초기화
+  useEffect(() => {
+    if (!problem) return;
+    const words: WordChip[] = problem.sentenceData.options.map((text, i) => ({
       id: `w${i}`,
       text,
       colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
-    }),
-  );
-
-  const [availableWords, setAvailableWords] =
-    useState<WordChip[]>(initialWords);
-  const [slots, setSlots] = useState<SlotState[]>(
-    problem.sentenceData.slots.map((slot) => ({ ...slot, currentWord: null })),
-  );
+    }));
+    setAvailableWords(words);
+    setSlots(
+      problem.sentenceData.slots.map((slot) => ({ ...slot, currentWord: null })),
+    );
+  }, [problem]);
 
   const handleDragStart = (word: WordChip) => setDraggedWord(word);
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
@@ -115,17 +89,47 @@ export default function SentencePage() {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!problem) return;
     const allFilled = slots.every((s) => s.currentWord !== null);
     if (!allFilled) {
       alert("모든 빈칸을 채워주세요!");
       return;
     }
-    const allCorrect = slots.every(
-      (s) => s.currentWord?.text === s.correctAnswer,
-    );
-    setActiveModal(allCorrect ? "correct" : "incorrect");
+    setIsSubmitting(true);
+    try {
+      const answers = slots.map((s) => s.currentWord!.text);
+      const result = await api.submitSentence({
+        sentenceProblemId: problem.sentenceProblemId,
+        answers,
+      });
+      setActiveModal(result.correct ? "correct" : "incorrect");
+    } catch {
+      // 제출 실패 시 클라이언트 검증으로 폴백
+      const allCorrect = slots.every(
+        (s) => s.currentWord?.text === s.correctAnswer,
+      );
+      setActiveModal(allCorrect ? "correct" : "incorrect");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">문제를 불러오는 중...</p>
+      </main>
+    );
+  }
+
+  if (isError || !problem) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">문제를 불러오지 못했습니다.</p>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -141,7 +145,9 @@ export default function SentencePage() {
         <div className="w-[100px] h-[40px] bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-s-16sb">
           로고
         </div>
-        <h1 className="font-display text-xl font-bold text-gray-700">문장 분해 연습</h1>
+        <h1 className="font-display text-xl font-bold text-gray-700">
+          문장 분해 연습
+        </h1>
         <button className="flex-shrink-0">
           <Image src="/images/close.png" alt="닫기" width={32} height={32} />
         </button>
@@ -150,8 +156,8 @@ export default function SentencePage() {
       {/* 메인 */}
       <div className="flex-1 flex flex-col items-center pt-6 px-4 z-10 w-full max-w-[860px] mx-auto">
         {/* 문장 바 */}
-        <div className="bg-[#F2FEE6]/90 border border-[#C6FA98] rounded-2xl px-8 py-4 mb-8 flex items-center justify-center gap-4 shadow-sm w-full max-w-[600px]">
-          <span className="text-s-18b text-gray-800">
+        <div className="bg-[#F2FEE6]/90 border border-[#cff3af] rounded-2xl px-8 py-4 mb-8 flex items-center shadow-sm w-full max-h-15 max-w-[600px]">
+          <span className="flex-1 text-center text-s-18b font-bold text-gray-800">
             {problem.sentenceText}
           </span>
           <button className="hover:scale-110 transition-transform flex-shrink-0">
@@ -160,7 +166,7 @@ export default function SentencePage() {
         </div>
 
         {/* 워크스페이스 */}
-        <div className="bg-white/70 backdrop-blur-sm w-full rounded-[40px] p-10 flex flex-col items-center border border-[#CCCCCC] shadow-sm">
+        <div className="bg-[#E4F0F6] w-full rounded-[40px] p-10 flex flex-col items-center border border-[#CCCCCC] shadow-sm">
           {/* 슬롯 */}
           <div className="flex gap-4 w-full justify-center mb-8 flex-wrap">
             {slots.map((slot) => (
@@ -205,9 +211,10 @@ export default function SentencePage() {
         <div className="flex gap-3 mt-8 mb-8 w-full max-w-[600px]">
           <button
             onClick={handleSubmit}
-            className="flex-1 h-14 bg-[#FFF0F0] text-gray-700 border border-[#FFD0D5] rounded-[20px] text-sm font-semibold hover:bg-[#FFE5E5] transition-colors"
+            disabled={isSubmitting}
+            className="flex-1 h-14 bg-[#FFF0F0] text-gray-700 border border-[#FFD0D5] rounded-[20px] text-sm font-semibold hover:bg-[#FFE5E5] transition-colors disabled:opacity-60"
           >
-            제출하기
+            {isSubmitting ? "제출 중..." : "제출하기"}
           </button>
           <button
             onClick={() => setActiveModal("hint")}

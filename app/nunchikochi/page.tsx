@@ -1,24 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
+import { api, CharacterListItem, CharacterDetail } from "../../lib/api";
 
-interface Character {
-  id: string;
-  name: string;
-  age: string;
-  personality: string;
-  quest: string;
-  likeTags: string[];
-  warnTags: string[];
-  description: string;
-  speechStyle: string;
-  likes: string;
-  dislikes: string;
-  specialNote: string;
-  cardBg: string;
-  cardImage: string;
+// 카드 배경/이미지 기본값 (API에서 미제공 시)
+const CARD_BG = [
+  "bg-[#E5F5D8]",
+  "bg-[#FFD0D5]",
+  "bg-[#E1FCFF]",
+  "bg-[#FFF8D6]",
+];
+const CARD_IMAGES = [
+  "/images/charactercard1.png",
+  "/images/charactercard2.png",
+  "/images/charactercard3.png",
+  "/images/charactercard4.png",
+];
+
+function withDefaults(
+  item: CharacterListItem,
+  index: number,
+): CharacterListItem {
+  return {
+    cardBg: CARD_BG[index % CARD_BG.length],
+    cardImage: CARD_IMAGES[index % CARD_IMAGES.length],
+    ...item,
+  };
 }
 
 interface Message {
@@ -27,73 +37,6 @@ interface Message {
   text: string;
   isTyping?: boolean;
 }
-
-const CHARACTERS: Character[] = [
-  {
-    id: "1",
-    name: "김철수",
-    age: "10세",
-    personality: "소심",
-    quest: "마음 온도계 100%로 채우기",
-    likeTags: ["공룡", "로봇"],
-    warnTags: ["큰소리 주의"],
-    description: "소심하고 낯을 많이 가림. 친구가 큰 소리를 내면 깜짝 놀람",
-    speechStyle: '"~했어..."처럼 말끝을 흐리는 편. 점을 많이 씀.',
-    likes: "공룡, 로봇",
-    dislikes: "매운 음식, 큰 소리",
-    specialNote: "긴장하면 귀를 만지작거림.",
-    cardBg: "bg-[#E5F5D8]",
-    cardImage: "/images/charactercard1.png",
-  },
-  {
-    id: "2",
-    name: "박하린",
-    age: "11세",
-    personality: "활발",
-    quest: "마음 온도계 100%로 채우기",
-    likeTags: ["친구 사귀기", "게임"],
-    warnTags: [],
-    description: "활발하고 에너지 넘침. 새로운 친구를 사귀는 것을 좋아함.",
-    speechStyle: "빠르게 말하고 감탄사를 많이 씀.",
-    likes: "친구 사귀기, 게임",
-    dislikes: "혼자 있기, 조용한 것",
-    specialNote: "흥분하면 목소리가 커짐.",
-    cardBg: "bg-[#FFD0D5]",
-    cardImage: "/images/charactercard2.png",
-  },
-  {
-    id: "3",
-    name: "이준호",
-    age: "10세",
-    personality: "꼼꼼",
-    quest: "마음 온도계 100%로 채우기",
-    likeTags: ["레고", "퍼즐"],
-    warnTags: [],
-    description: "꼼꼼하고 계획적임. 정해진 규칙을 잘 지킴.",
-    speechStyle: "정확하게 말하는 편. 숫자나 이름을 정확히 씀.",
-    likes: "레고, 퍼즐",
-    dislikes: "무계획, 어지러운 것",
-    specialNote: "물건을 제자리에 놓는 것을 중요하게 생각함.",
-    cardBg: "bg-[#E1FCFF]",
-    cardImage: "/images/charactercard3.png",
-  },
-  {
-    id: "4",
-    name: "최민지",
-    age: "9세",
-    personality: "수줍",
-    quest: "마음 온도계 100%로 채우기",
-    likeTags: ["그림", "동물"],
-    warnTags: [],
-    description: "수줍음이 많고 말이 적음. 그림 그리기를 좋아함.",
-    speechStyle: '"..."으로 끝내는 경우가 많음. 목소리가 작음.',
-    likes: "그림, 동물",
-    dislikes: "큰 소리, 많은 사람",
-    specialNote: "긴장하면 고개를 숙이는 버릇이 있음.",
-    cardBg: "bg-[#FFF8D6]",
-    cardImage: "/images/charactercard4.png",
-  },
-];
 
 function BackgroundDecorations() {
   return (
@@ -127,51 +70,127 @@ function PageHeader({
 
 export default function NunchikochePage() {
   const [view, setView] = useState<"selection" | "chat">("selection");
-  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [openCardId, setOpenCardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [moodPercent, setMoodPercent] = useState(30);
   const [inputText, setInputText] = useState("");
-  const [chatChar, setChatChar] = useState<Character>(CHARACTERS[0]);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "m1", sender: "character", text: "", isTyping: true },
-  ]);
+  const [chatChar, setChatChar] = useState<CharacterListItem | null>(null);
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [characterDetails, setCharacterDetails] = useState<
+    Record<number, CharacterDetail>
+  >({});
 
-  const filteredChars = CHARACTERS.filter(
+  // 캐릭터 목록 조회
+  const {
+    data: rawCharacters = [],
+    isLoading: isLoadingChars,
+  } = useQuery({
+    queryKey: ["characters"],
+    queryFn: api.getCharacters,
+  });
+
+  const characters = rawCharacters.map(withDefaults);
+
+  // 카드 열릴 때 캐릭터 상세 조회
+  useEffect(() => {
+    if (openCardId === null) return;
+    if (characterDetails[openCardId]) return;
+    api
+      .getCharacter(openCardId)
+      .then((detail) =>
+        setCharacterDetails((prev) => ({ ...prev, [openCardId]: detail })),
+      )
+      .catch(console.error);
+  }, [openCardId, characterDetails]);
+
+  const filteredChars = characters.filter(
     (c) =>
       !searchQuery ||
       c.name.includes(searchQuery) ||
-      c.personality.includes(searchQuery) ||
-      [...c.likeTags, ...c.warnTags].some((t) => t.includes(searchQuery)),
+      c.personalityLabel.includes(searchQuery) ||
+      [...(c.likeTags ?? []), ...(c.warningTag ? [c.warningTag] : [])].some(
+        (t) => t.includes(searchQuery),
+      ),
   );
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const handleSend = async () => {
+    if (!inputText.trim() || !sessionId || isSending) return;
+    const userText = inputText;
+    setInputText("");
+    setIsSending(true);
+
     setMessages((prev) => [
       ...prev,
-      { id: `m${Date.now()}`, sender: "user", text: inputText },
+      { id: `u${Date.now()}`, sender: "user", text: userText },
+      { id: `c${Date.now()}`, sender: "character", text: "", isTyping: true },
     ]);
-    setInputText("");
-    const newMood = Math.min(moodPercent + 35, 100);
-    setMoodPercent(newMood);
-    if (newMood >= 100) setTimeout(() => setShowSuccess(true), 300);
+
+    try {
+      const res = await api.sendMessage(sessionId, userText);
+      const newMood = res.moodPercent ?? Math.min(moodPercent + 20, 100);
+      setMoodPercent(newMood);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.isTyping ? { ...m, text: res.reply, isTyping: false } : m,
+        ),
+      );
+      if (newMood >= 100) setTimeout(() => setShowSuccess(true), 300);
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.isTyping
+            ? { ...m, text: "응답에 실패했습니다.", isTyping: false }
+            : m,
+        ),
+      );
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleStartChat = (char: Character) => {
+  const handleStartChat = async (char: CharacterListItem) => {
     setChatChar(char);
     setMoodPercent(30);
+    setSessionId(null);
     setMessages([{ id: "m1", sender: "character", text: "", isTyping: true }]);
     setOpenCardId(null);
     setView("chat");
+
+    try {
+      const { sessionId: sid } = await api.createSession(char.characterId);
+      setSessionId(sid);
+      setMessages([
+        {
+          id: "m1",
+          sender: "character",
+          text: `안녕하세요! 저는 ${char.name}이에요.`,
+          isTyping: false,
+        },
+      ]);
+    } catch {
+      setMessages([
+        {
+          id: "m1",
+          sender: "character",
+          text: "세션을 시작하지 못했습니다.",
+          isTyping: false,
+        },
+      ]);
+    }
   };
 
-  const handleCardClick = (char: Character) => {
-    setOpenCardId((prev) => (prev === char.id ? null : char.id));
+  const handleCardClick = (char: CharacterListItem) => {
+    setOpenCardId((prev) =>
+      prev === char.characterId ? null : char.characterId,
+    );
   };
 
   // ─── 채팅 ─────────────────────────────────────────────────────────────────
-  if (view === "chat") {
+  if (view === "chat" && chatChar) {
     return (
       <main
         className="min-h-screen flex flex-col relative overflow-hidden"
@@ -195,16 +214,14 @@ export default function NunchikochePage() {
                   <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <div className="w-12 h-12 rounded-full overflow-hidden">
                       <Image
-                        src={chatChar.cardImage}
+                        src={chatChar.cardImage ?? CARD_IMAGES[0]}
                         alt={chatChar.name}
                         width={48}
                         height={48}
                         className="object-cover w-full h-full"
                       />
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {chatChar.name}
-                    </span>
+                    <span className="text-xs text-gray-500">{chatChar.name}</span>
                     <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-400 rounded-full transition-all duration-500"
@@ -249,13 +266,17 @@ export default function NunchikochePage() {
               <input
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && !e.nativeEvent.isComposing && handleSend()
+                }
                 placeholder="입력해주세요"
-                className="flex-1 h-16 px-5 rounded-full bg-[#FAFAFA] border border-[#BABABA] shadow-[8px_8px_8px_rgba(94,94,94,0.04)] focus:outline-none focus:border-[#C6FA98] text-sm"
+                disabled={isSending || !sessionId}
+                className="flex-1 h-16 px-5 rounded-full bg-[#FAFAFA] border border-[#BABABA] shadow-[8px_8px_8px_rgba(94,94,94,0.04)] focus:outline-none focus:border-[#C6FA98] text-sm disabled:opacity-60"
               />
               <button
                 onClick={handleSend}
-                className="h-16 px-5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                disabled={isSending || !sessionId}
+                className="h-16 px-5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-60"
               >
                 보내기 ↑
               </button>
@@ -332,44 +353,47 @@ export default function NunchikochePage() {
           </div>
 
           <div className="flex flex-col gap-2 overflow-y-auto flex-1">
-            {filteredChars.map((char) => (
-              <button
-                key={char.id}
-                onClick={() => handleCardClick(char)}
-                className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${
-                  openCardId === char.id
-                    ? "border-[#C6FA98] bg-[#F2FEE6]"
-                    : "border-gray-200 bg-white hover:bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-semibold text-sm text-gray-800">
-                    {char.name}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {char.age} · {char.personality}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {char.likeTags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 bg-[#E5F5D8] text-green-700 rounded-full text-xs"
-                    >
-                      {t}
+            {isLoadingChars ? (
+              <p className="text-sm text-gray-400 text-center py-4">
+                불러오는 중...
+              </p>
+            ) : (
+              filteredChars.map((char) => (
+                <button
+                  key={char.characterId}
+                  onClick={() => handleCardClick(char)}
+                  className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${
+                    openCardId === char.characterId
+                      ? "border-[#C6FA98] bg-[#F2FEE6]"
+                      : "border-gray-200 bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-semibold text-sm text-gray-800">
+                      {char.name}
                     </span>
-                  ))}
-                  {char.warnTags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs"
-                    >
-                      {t}
+                    <span className="text-xs text-gray-500">
+                      {char.age}세 · {char.personalityLabel}
                     </span>
-                  ))}
-                </div>
-              </button>
-            ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(char.likeTags ?? []).map((t) => (
+                      <span
+                        key={t}
+                        className="px-2 py-0.5 bg-[#E5F5D8] text-green-700 rounded-full text-xs"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                    {char.warningTag && (
+                      <span className="px-2 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs">
+                        {char.warningTag}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -377,12 +401,12 @@ export default function NunchikochePage() {
         <div className="flex-1 flex flex-col min-w-0">
           <h2 className="font-bold text-gray-800 mb-3">성격 카드</h2>
           <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-            {CHARACTERS.map((char) => {
-              const isOpen = openCardId === char.id;
+            {characters.map((char, index) => {
+              const isOpen = openCardId === char.characterId;
+              const detail = characterDetails[char.characterId];
               return (
-                /* 카드: 고정 높이, flex column — 이미지가 줄어들고 정보가 위로 확장 */
                 <div
-                  key={char.id}
+                  key={char.characterId}
                   className={`flex-shrink-0 w-[240px] md:w-[280px] h-[560px] flex flex-col rounded-[30px] overflow-hidden cursor-pointer transition-all shadow-sm ${
                     isOpen
                       ? "ring-2 ring-[#C6FA98] ring-offset-2 shadow-md"
@@ -390,32 +414,32 @@ export default function NunchikochePage() {
                   }`}
                   onClick={() => handleCardClick(char)}
                 >
-                  {/* 퀘스트 — 고정 */}
+                  {/* 퀘스트 */}
                   <div className="flex-shrink-0 bg-white/95 px-4 pt-3 pb-2 text-center">
                     <p className="text-xs text-gray-400">퀘스트</p>
                     <p className="text-xs font-semibold text-gray-600">
-                      {char.quest}
+                      {detail?.quest ?? "마음 온도계 100%로 채우기"}
                     </p>
                   </div>
 
-                  {/* 이미지 — flex-1: 정보 섹션이 커지면 이미지가 줄어듦 */}
+                  {/* 이미지 */}
                   <div className="flex-1 relative min-h-0">
                     <Image
-                      src={char.cardImage}
+                      src={char.cardImage ?? CARD_IMAGES[index % CARD_IMAGES.length]}
                       alt={char.name}
                       fill
                       className="object-cover"
                     />
                   </div>
 
-                  {/* 정보 섹션 — 클릭하면 max-height 확장 → 위로 자라나는 효과 */}
+                  {/* 정보 섹션 */}
                   <div
                     className={`flex-shrink-0 bg-white overflow-hidden transition-all duration-500 ease-in-out ${
                       isOpen ? "max-h-[420px]" : "max-h-[96px]"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* 항상 보이는 이름/태그 — 클릭 토글 */}
+                    {/* 항상 보이는 이름/태그 */}
                     <div
                       className="px-4 pt-2 pb-2 cursor-pointer"
                       onClick={(e) => {
@@ -428,11 +452,11 @@ export default function NunchikochePage() {
                           {char.name}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {char.age} · {char.personality}
+                          {char.age}세 · {char.personalityLabel}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {char.likeTags.map((t) => (
+                        {(char.likeTags ?? []).map((t) => (
                           <span
                             key={t}
                             className="px-2.5 py-0.5 bg-[#E5F5D8] text-green-700 rounded-full text-xs"
@@ -440,53 +464,60 @@ export default function NunchikochePage() {
                             {t}
                           </span>
                         ))}
-                        {char.warnTags.map((t) => (
-                          <span
-                            key={t}
-                            className="px-2.5 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs"
-                          >
-                            {t}
+                        {char.warningTag && (
+                          <span className="px-2.5 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs">
+                            {char.warningTag}
                           </span>
-                        ))}
+                        )}
                       </div>
                     </div>
 
-                    {/* 상세 정보 — 열렸을 때 */}
+                    {/* 상세 정보 */}
                     <div className="px-4 pb-4 flex flex-col gap-2.5">
-                      <div>
-                        <p className="text-xs text-gray-400 mb-0.5">성격</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">
-                          {char.description}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 mb-0.5">말투</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">
-                          {char.speechStyle}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-xs text-gray-400 mb-0.5">
-                            좋아하는 것
-                          </p>
-                          <p className="text-xs text-gray-700">{char.likes}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400 mb-0.5">
-                            특이사항
-                          </p>
-                          <p className="text-xs text-gray-700">
-                            {char.specialNote}
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 mb-0.5">
-                          싫어하는 것
-                        </p>
-                        <p className="text-xs text-gray-700">{char.dislikes}</p>
-                      </div>
+                      {!detail && isOpen ? (
+                        <p className="text-xs text-gray-400">불러오는 중...</p>
+                      ) : detail ? (
+                        <>
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">성격</p>
+                            <p className="text-xs text-gray-700 leading-relaxed">
+                              {detail.description}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">말투</p>
+                            <p className="text-xs text-gray-700 leading-relaxed">
+                              {detail.speechStyle}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-xs text-gray-400 mb-0.5">
+                                좋아하는 것
+                              </p>
+                              <p className="text-xs text-gray-700">
+                                {detail.likes}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-400 mb-0.5">
+                                특이사항
+                              </p>
+                              <p className="text-xs text-gray-700">
+                                {detail.specialNote}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">
+                              싫어하는 것
+                            </p>
+                            <p className="text-xs text-gray-700">
+                              {detail.dislikes}
+                            </p>
+                          </div>
+                        </>
+                      ) : null}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
