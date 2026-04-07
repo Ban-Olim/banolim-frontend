@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from "next/image";
+import { api } from "@/lib/api";
 
 // --- 타입 정의 ---
 type WordType = 'subject' | 'time' | 'place' | 'action';
@@ -22,6 +23,7 @@ interface ChatMessage {
     id: number;
     sender: 'bot' | 'user';
     text: string;
+    audioUrl?: string | null;
 }
 
 interface ChatLog {
@@ -33,67 +35,7 @@ interface ChatLog {
     tags: string[];
 }
 
-// --- 더미 데이터 (모달창 스크롤 테스트용으로 대폭 추가) ---
-const INCORRECT_NOTES: IncorrectNote[] = [
-    {
-        id: 1, question: "나는 어제 공원에서 친구를 만났어요", correctAnswer: "나는 어제 공원에서 친구를 만났어요", attempts: [
-            [{ text: "어제", type: "time" }, { text: "나는", type: "subject" }, { text: "친구를 만났어요", type: "action" }, { text: "공원에서", type: "place" }],
-            [{ text: "나는", type: "subject" }, { text: "친구를 만났어요", type: "action" }, { text: "어제", type: "time" }, { text: "공원에서", type: "place" }],
-            [{ text: "나는", type: "subject" }, { text: "어제", type: "time" }, { text: "공원에서", type: "place" }, { text: "친구를 만났어요", type: "action" }],
-        ]
-    },
-    {
-        id: 2, question: "내일까지 학교에 딱풀을 가져가야 해요", correctAnswer: "내일까지 학교에 딱풀을 가져가야 해요", attempts: [
-            [{ text: "학교에", type: "place" }, { text: "내일까지", type: "time" }, { text: "딱풀을 가져가야 해요", type: "action" }],
-            [{ text: "내일까지", type: "time" }, { text: "딱풀을 가져가야 해요", type: "action" }, { text: "학교에", type: "place" }],
-            [{ text: "학교에", type: "place" }, { text: "딱풀을 가져가야 해요", type: "action" }, { text: "내일까지", type: "time" }],
-        ]
-    },
-    {
-        id: 3, question: "오늘은 날씨가 매우 맑고 따뜻해요", correctAnswer: "오늘은 날씨가 매우 맑고 따뜻해요", attempts: [
-            [{ text: "매우 맑고 따뜻해요", type: "action" }, { text: "오늘은", type: "time" }, { text: "날씨가", type: "subject" }],
-            [{ text: "날씨가", type: "subject" }, { text: "오늘은", type: "time" }, { text: "매우 맑고 따뜻해요", type: "action" }],
-        ]
-    },
-    { id: 4, question: "저녁에 가족들과 맛있는 피자를 먹었어요", correctAnswer: "저녁에 가족들과 맛있는 피자를 먹었어요", attempts: [] },
-    { id: 5, question: "주말에는 도서관에서 책을 빌릴 거예요", correctAnswer: "주말에는 도서관에서 책을 빌릴 거예요", attempts: [] },
-    { id: 6, question: "동생이랑 같이 자전거를 탔어요", correctAnswer: "동생이랑 같이 자전거를 탔어요", attempts: [] },
-    { id: 7, question: "어제 본 영화는 정말 재미있었어요", correctAnswer: "어제 본 영화는 정말 재미있었어요", attempts: [] },
-];
-
-const CHAT_LOGS: ChatLog[] = [
-    {
-        id: 1, name: "김철수", age: "10세", trait: "소심", tags: ["공룡", "로봇", "큰소리 주의"], messages: [
-            { id: 1, sender: 'bot', text: "안녕 철수야! 오늘 하루 어땠어?" },
-            { id: 2, sender: 'user', text: "그냥 그랬어..." },
-            { id: 3, sender: 'bot', text: "무슨 일 있었니? 목소리에 힘이 없네." },
-            { id: 4, sender: 'user', text: "오늘 미술 시간에 공룡 그렸는데, 친구가 안 멋있다고 놀렸어." },
-            { id: 5, sender: 'bot', text: "저런, 많이 속상했겠다. 철수가 그린 공룡은 어떤 공룡이었어?" },
-            { id: 6, sender: 'user', text: "티라노사우루스! 엄청 크고 튼튼한 이빨도 그렸어." },
-            { id: 7, sender: 'bot', text: "우와, 정말 멋진 티라노사우루스였겠다! 친구가 철수의 그림을 자세히 못 봐서 그랬을 거야. 내가 볼 땐 철수가 최고로 잘 그렸어!" },
-            { id: 8, sender: 'user', text: "진짜? 고마워! 내일은 로봇도 그려볼래." },
-            { id: 9, sender: 'bot', text: "좋은 생각이야! 철수가 그릴 로봇도 정말 기대된다!" },
-        ]
-    },
-    {
-        id: 2, name: "박하린", age: "11세", trait: "활발", tags: ["친구 사귀기", "게임"], messages: [
-            { id: 1, sender: 'bot', text: "하린아 안녕! 주말에 뭐 하면서 놀았어?" },
-            { id: 2, sender: 'user', text: "친구들이랑 놀이터에서 얼음땡 했어!" },
-            { id: 3, sender: 'bot', text: "와, 얼음땡 정말 재밌었겠다! 하린이가 술래였어?" },
-            { id: 4, sender: 'user', text: "아니, 내가 끝까지 안 들키고 도망 다녔지! 엄청 빨랐어 ㅋㅋㅋ" },
-            { id: 5, sender: 'bot', text: "대단한데! 다음에도 친구들이랑 재밌게 놀고 다치지 않게 조심해!" },
-        ]
-    },
-    {
-        id: 3, name: "이준호", age: "10세", trait: "꼼꼼", tags: ["레고", "퍼즐"], messages: [
-            { id: 1, sender: 'bot', text: "준호야, 주말인데 뭐 하고 있어?" },
-            { id: 2, sender: 'user', text: "어제 산 레고 성 조립하고 있어. 근데 조각이 너무 많아서 헷갈려." },
-            { id: 3, sender: 'bot', text: "천천히 설명서 보고 색깔별로 분류해 보면 어떨까? 준호는 꼼꼼하니까 금방 할 수 있을 거야!" },
-            { id: 4, sender: 'user', text: "오! 그렇게 해볼게. 다 만들고 보여줄게!" },
-        ]
-    },
-    { id: 4, name: "최민지", age: "9세", trait: "호기심 많음", tags: ["우주", "그림 그리기"], messages: [] },
-];
+// --- 챗봇 데이터 설정 ---
 
 // 레벨 1~10 데이터
 const LEVELS = [
@@ -104,8 +46,8 @@ const LEVELS = [
     { lv: 4, name: "문장 조립꾼" },
     { lv: 5, name: "표현 탐험가" },
     { lv: 6, name: "대화 샛별" },
-    { lv: 7, name: "실전 대화러", isCurrent: true },
-    { lv: 8, name: "맥락 마스터", isNext: true },
+    { lv: 7, name: "실전 대화러" },
+    { lv: 8, name: "맥락 마스터" },
     { lv: 9, name: "언어 연금술사" },
     { lv: 10, name: "반올리 마스터" },
 ];
@@ -132,18 +74,216 @@ const Cloud = ({ className }: { className?: string }) => (
 );
 
 export default function DashboardPage() {
+    const [incorrectNotes, setIncorrectNotes] = useState<IncorrectNote[]>([]);
+    const [chatSessions, setChatSessions] = useState<ChatLog[]>([]);
+    const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
+    const [isCheckedInToday, setIsCheckedInToday] = useState(false);
+    const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
     const [selectedNote, setSelectedNote] = useState<IncorrectNote | null>(null);
     const [selectedChat, setSelectedChat] = useState<ChatLog | null>(null);
+    const [userLevelData, setUserLevelData] = useState<any>(null);
 
-    const [selectedYear, setSelectedYear] = useState(2026);
-    const [selectedMonth, setSelectedMonth] = useState(1); // 1월 기본
+    useEffect(() => {
+        api.getUserLevel()
+            .then(data => {
+                if (data) {
+                    setUserLevelData(data.data || data.content || data);
+                }
+            })
+            .catch(error => {
+                console.error("Failed to fetch user level:", error);
+            });
+
+        api.getSentenceAttempts()
+            .then(data => {
+                if (data && Array.isArray(data)) {
+                    const normalized = data.map((item: any) => ({
+                        id: item.problemId || item.id,
+                        question: item.sentenceText || item.question,
+                        correctAnswer: item.correctAnswer || item.sentenceText || "정답 정보 없음",
+                        attempts: item.attempts || []
+                    }));
+                    setIncorrectNotes(normalized);
+                }
+            })
+            .catch(error => {
+                console.error("Failed to fetch sentence attempts:", error);
+            });
+
+        api.getChatSessions()
+            .then(data => {
+                if (data && Array.isArray(data)) {
+                    const sessions = data.map((item: any) => ({
+                        id: item.sessionId,
+                        name: item.characterName,
+                        age: `${item.characterAge}세`,
+                        trait: item.characterTrait,
+                        tags: [
+                            ...(item.likeTags || []),
+                            ...(item.warningTag ? [item.warningTag] : [])
+                        ],
+                        messages: []
+                    }));
+                    setChatSessions(sessions);
+                }
+            })
+            .catch(error => {
+                console.error("Failed to fetch chat sessions:", error);
+            });
+
+    }, []);
+
+    useEffect(() => {
+        api.getAttendanceStamps(selectedYear, selectedMonth)
+            .then(data => {
+                let parsedDates: string[] = [];
+                if (data && Array.isArray(data)) {
+                    parsedDates = data.map(d => typeof d === 'string' ? d : (d.date || d.stampDate || d.createdAt));
+                }
+                setAttendanceDates(parsedDates);
+
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const currentY = new Date().getFullYear();
+                const currentM = new Date().getMonth() + 1;
+
+                if (selectedYear === currentY && selectedMonth === currentM) {
+                    const isTodayChecked = parsedDates.some(d => d && d.startsWith(todayStr));
+
+                    if (isTodayChecked) {
+                        setIsCheckedInToday(true);
+                    } else {
+                        api.checkAttendance()
+                            .then(() => {
+                                setIsCheckedInToday(true);
+                                setAttendanceDates(prev => [...prev, todayStr]);
+                            })
+                            .catch(err => console.error("자동 출석 실패:", err));
+                    }
+                }
+            })
+            .catch(error => {
+                console.error("Failed to fetch attendance stamps:", error);
+
+                const currentY = new Date().getFullYear();
+                const currentM = new Date().getMonth() + 1;
+                if (selectedYear === currentY && selectedMonth === currentM) {
+                    api.checkAttendance()
+                        .then(() => {
+                            setIsCheckedInToday(true);
+                            // Fallback, update UI manually so the stamp shows
+                            const today = new Date();
+                            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                            setAttendanceDates(prev => [...prev, todayStr]);
+                        })
+                        .catch(e => console.error("2차 자동 출석 실패:", e));
+                }
+            });
+    }, [selectedYear, selectedMonth]);
+
+    const handleChatClick = async (session: ChatLog) => {
+        try {
+            const logData = await api.getChatLog(session.id);
+            let rawMessages: any[] = [];
+            const dataObj: any = logData;
+
+            if (dataObj && Array.isArray(dataObj)) {
+                rawMessages = dataObj;
+            } else if (dataObj && Array.isArray(dataObj.data)) {
+                rawMessages = dataObj.data;
+            } else if (dataObj && Array.isArray(dataObj.content)) {
+                rawMessages = dataObj.content;
+            } else if (dataObj && Array.isArray(dataObj.messages)) {
+                rawMessages = dataObj.messages;
+            } else if (dataObj && Array.isArray(dataObj.chatLogs)) {
+                rawMessages = dataObj.chatLogs;
+            }
+
+            const messages: ChatMessage[] = rawMessages.map((msg: any, idx: number) => ({
+                id: msg.chatId || msg.id || idx,
+                sender: (msg.speaker === 'USER' || msg.speaker === 'user' || msg.role === 'user') ? 'user' : 'bot',
+                text: msg.message || msg.text || msg.content || "불러오기 에러 (내용을 찾을 수 없음)",
+                audioUrl: msg.audioUrl || msg.audio || null
+            }));
+
+            setSelectedChat({ ...session, messages });
+        } catch (error) {
+            console.error("Failed to fetch chat logs:", error);
+            setSelectedChat(session);
+        }
+    };
+
+    const handleNoteClick = async (note: IncorrectNote) => {
+        try {
+            const detail = await api.getSentenceAttemptDetail(note.id);
+            let attemptsArray: Word[][] = [];
+            if (detail && detail.attempts && Array.isArray(detail.attempts)) {
+                attemptsArray = detail.attempts.map((att: any) => {
+                    const answersMap = att.userAnswers || {};
+                    return Object.keys(answersMap).sort((a, b) => parseInt(a) - parseInt(b)).map(key => {
+                        const types: WordType[] = ['time', 'subject', 'action', 'place'];
+                        const type: WordType = types[(parseInt(key) - 1) % types.length] || 'subject';
+                        return { text: answersMap[key], type };
+                    });
+                });
+            } else {
+                attemptsArray = note.attempts || [];
+            }
+            setSelectedNote({
+                ...note,
+                question: detail?.sentenceText || note.question,
+                attempts: attemptsArray
+            });
+        } catch (error) {
+            console.error("Failed to fetch sentence attempt details:", error);
+            setSelectedNote(note);
+        }
+    };
+
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+    const userData = userLevelData || {};
+    const myLevel = userData.level ?? userData.currentLevel ?? 7;
+    const myLevelName = userData.levelName || LEVELS.find(l => l.lv === myLevel)?.name || "실전 대화러";
+    const myProgressRate = userData.progressRate || 0;
+    const myConsecutiveDays = userData.consecutiveDays ?? userData.consecutiveAttendanceDays ?? 0;
+    const myNextLevelRemainingXp = userData.nextLevelRemainingXp || 0;
+    const myTotalXp = userData.totalXp ?? userData.totalExp ?? 0;
+    const myTodayXpList = userData.todayXpList || [];
+
     const [clickedLevel, setClickedLevel] = useState<number | null>(null);
-    const currentLevel = LEVELS.find(l => l.isCurrent)?.lv || 0;
+    const currentLevel = myLevel;
     const displayLevel = clickedLevel !== null ? clickedLevel : currentLevel;
 
-    const attendanceDays = [8, 9, 15, 16];
+    // Use actual attendance dates from API depending on selected Year/Month
+    const attendanceDays = attendanceDates
+        .filter(d => d !== null && d !== undefined)
+        .map(d => {
+            if (!isNaN(Number(d)) && Number(d) > 0 && Number(d) <= 31) {
+                return Number(d); // e.g. [8, 9] from backend
+            }
+            const dt = new Date(d);
+            if (!isNaN(dt.getTime()) && dt.getFullYear() === selectedYear && (dt.getMonth() + 1) === selectedMonth) {
+                return dt.getDate();
+            }
+            return -1;
+        })
+        .filter(d => d !== -1);
+
+    const handleCheckIn = async () => {
+        if (isCheckedInToday) return;
+        try {
+            await api.checkAttendance();
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            setAttendanceDates(prev => [...prev, todayStr]);
+            setIsCheckedInToday(true);
+        } catch (error) {
+            console.error("Failed to check in:", error);
+            alert("출석 체크에 실패했습니다.");
+        }
+    };
 
     const getCalendarDays = (year: number, month: number) => {
         const firstDay = new Date(year, month - 1, 1).getDay();
@@ -203,9 +343,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2">
                             <span className="text-[#FBBF24] text-xl">📅</span>
                             <h2 className="text-[17px] font-extrabold text-gray-800">학습 달력</h2>
-                            <span className="ml-2 bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[11px] font-bold px-3 py-1 rounded-[8px] shadow-sm">
-                                연속 5일 🔥
-                            </span>
+
                         </div>
 
                         {/* 드롭다운 메뉴 */}
@@ -290,16 +428,20 @@ export default function DashboardPage() {
                             <div className="text-[12px] font-bold text-gray-400 mb-3 ml-2 border-b border-gray-50 pb-2">문장 분해 문제</div>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2.5">
-                            {INCORRECT_NOTES.map((note, idx) => (
-                                <button key={note.id} onClick={() => setSelectedNote(note)} className="flex items-center gap-3 w-full group shrink-0">
-                                    <div className="w-[26px] h-[26px] rounded-full bg-[#FFE4E6] text-[#EF4444] text-[11px] font-extrabold flex items-center justify-center shrink-0">
-                                        {idx + 1}
-                                    </div>
-                                    <div className="bg-[#F8F9FA] text-gray-600 font-bold text-[12px] px-4 py-3 rounded-[14px] flex-1 text-left truncate group-hover:bg-[#F1F3F5] transition-colors border border-transparent">
-                                        {note.question}
-                                    </div>
-                                </button>
-                            ))}
+                            {incorrectNotes.length === 0 ? (
+                                <div className="text-[12px] text-gray-400 text-center py-8 font-bold">오답노트가 없습니다.</div>
+                            ) : (
+                                incorrectNotes.map((note, idx) => (
+                                    <button key={note.id} onClick={() => handleNoteClick(note)} className="flex items-center gap-3 w-full group shrink-0">
+                                        <div className="w-[26px] h-[26px] rounded-full bg-[#FFE4E6] text-[#EF4444] text-[11px] font-extrabold flex items-center justify-center shrink-0">
+                                            {idx + 1}
+                                        </div>
+                                        <div className="bg-[#F8F9FA] text-gray-600 font-bold text-[12px] px-4 py-3 rounded-[14px] flex-1 text-left truncate group-hover:bg-[#F1F3F5] transition-colors border border-transparent">
+                                            {note.question}
+                                        </div>
+                                    </button>
+                                ))
+                            )}
                         </div>
                     </div>
 
@@ -311,27 +453,30 @@ export default function DashboardPage() {
                             <h2 className="text-[17px] font-extrabold text-gray-800">챗봇 로그내역</h2>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 pb-1">
-                            {CHAT_LOGS.map((log) => (
-                                <div key={log.id} className="border border-gray-100 rounded-[20px] p-4.5 shrink-0 bg-white shadow-sm">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="flex items-center gap-2.5">
-                                            <span className="font-extrabold text-[14px] text-gray-800">{log.name}</span>
-                                            <span className="text-[11px] text-gray-400 font-medium bg-[#F8F9FA] px-2.5 py-0.5 rounded-full">{log.age} · {log.trait}</span>
+                            {chatSessions.length === 0 ? (
+                                <div className="text-[12px] text-gray-400 text-center py-8 font-bold">진행 중인 채팅이 없습니다.</div>
+                            ) : (
+                                chatSessions.map((log) => (
+                                    <div key={log.id} className="border border-gray-100 rounded-[20px] p-4.5 shrink-0 bg-white shadow-sm">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="font-extrabold text-[14px] text-gray-800">{log.name}</span>
+                                                <span className="text-[11px] text-gray-400 font-medium bg-[#F8F9FA] px-2.5 py-0.5 rounded-full">{log.age} · {log.trait}</span>
+                                            </div>
+                                            <button onClick={() => handleChatClick(log)} className="border border-[#D4F1A1] bg-[#F7FEE7] hover:bg-[#ECFCCB] text-[#65A30D] font-bold text-[10px] px-3.5 py-1.5 rounded-[10px] transition-colors shrink-0">
+                                                대화 내역 보기
+                                            </button>
                                         </div>
-                                        <button onClick={() => setSelectedChat(log)} className="border border-[#D4F1A1] bg-[#F7FEE7] hover:bg-[#ECFCCB] text-[#65A30D] font-bold text-[10px] px-3.5 py-1.5 rounded-[10px] transition-colors shrink-0">
-                                            대화 내역 보기
-                                        </button>
+                                        <div className="flex gap-1.5 flex-wrap">
+                                            {log.tags.map(tag => (
+                                                <span key={tag} className={`border bg-white text-[10px] font-extrabold px-3 py-1 rounded-full ${tag === '큰소리 주의' ? 'border-[#FECDD3] text-[#E11D48]' : 'border-[#CEFA93] text-[#65A30D]'
+                                                    }`}>
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex gap-1.5 flex-wrap">
-                                        {log.tags.map(tag => (
-                                            <span key={tag} className={`border bg-white text-[10px] font-extrabold px-3 py-1 rounded-full ${tag === '큰소리 주의' ? 'border-[#FECDD3] text-[#E11D48]' : 'border-[#CEFA93] text-[#65A30D]'
-                                                }`}>
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
+                                )))}
                         </div>
                     </div>
                 </section>
@@ -348,26 +493,52 @@ export default function DashboardPage() {
                     <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col shrink-0 relative z-10 pt-8">
                         <h2 className="text-[16px] font-extrabold text-gray-800 mb-5">나의 등급</h2>
                         <div className="flex gap-2 mb-6">
-                            <span className="bg-[#FFE4E6] text-[#EF4444] text-[10px] font-bold px-3 py-1.5 rounded-full border border-[#FECDD3]">연속 5일 🔥</span>
-                            <span className="bg-[#FEF9C3] border border-[#FDE047] text-[#D97706] text-[10px] font-bold px-3 py-1.5 rounded-full">오늘 출석 완료!</span>
+                            <span className="bg-[#FFE4E6] text-[#EF4444] text-[10px] font-bold px-3 py-1.5 rounded-full border border-[#FECDD3]">연속 {myConsecutiveDays}일 🔥</span>
+                            {isCheckedInToday ? (
+                                <span className="bg-[#FEF9C3] border border-[#FDE047] text-[#D97706] text-[10px] font-bold px-3 py-1.5 rounded-full">
+                                    오늘 출석 완료!
+                                </span>
+                            ) : (
+                                <button onClick={handleCheckIn} className="bg-white border-2 border-[#A3E635] text-[#4D7C0F] text-[10px] font-extrabold px-3 py-1.5 rounded-full hover:bg-[#F7FEE7] transition-colors shadow-sm">
+                                    오늘 출석하기
+                                </button>
+                            )}
                         </div>
 
-                        <div className="text-[12px] text-gray-400 mb-1.5 font-bold">현재 등급 &nbsp;&nbsp;&nbsp;&nbsp;<strong className="text-gray-800 text-[13px] font-extrabold">7등급 · 실전 대화러</strong></div>
-                        <div className="text-[12px] text-gray-400 mb-6 font-bold">다음 등급까지 &nbsp;<strong className="text-gray-800 text-[13px] font-extrabold">320 XP</strong></div>
+                        <div className="text-[12px] text-gray-400 mb-1.5 font-bold">현재 등급 &nbsp;&nbsp;&nbsp;&nbsp;<strong className="text-gray-800 text-[13px] font-extrabold">{myLevel}등급 · {myLevelName}</strong></div>
+                        <div className="text-[12px] text-gray-400 mb-6 font-bold">
+                            {myLevel >= 10 ? (
+                                <strong className="text-[#65A30D] text-[13px] font-extrabold">최고 등급입니다! 🎉</strong>
+                            ) : (
+                                <>다음 등급까지 &nbsp;<strong className="text-gray-800 text-[13px] font-extrabold">{myNextLevelRemainingXp} XP</strong></>
+                            )}
+                        </div>
 
                         <div className="flex justify-between items-center text-[11px] text-gray-400 font-bold mb-2.5 border-t border-gray-50 pt-5">
                             <span>등급 진행률</span>
-                            <span>누적 점수 (XP) &nbsp;&nbsp;<strong className="text-gray-800 text-[12px] font-extrabold">1,680 XP</strong></span>
+                            <span>누적 점수 (XP) &nbsp;&nbsp;<strong className="text-gray-800 text-[12px] font-extrabold">{myTotalXp.toLocaleString()} XP</strong></span>
                         </div>
 
                         <div className="w-full bg-[#F3F4F6] rounded-full h-[12px] mb-5 flex p-[1px]">
-                            <div className="bg-[#A3E635] h-full w-[70%] rounded-full shadow-sm"></div>
+                            <div className="bg-[#A3E635] h-full rounded-full shadow-sm" style={{ width: `${myProgressRate}%` }}></div>
                         </div>
 
                         <div className="flex items-center gap-3 text-[11px] font-bold text-gray-500">
                             <span>오늘 획득</span>
-                            <span className="text-gray-800">+40 XP (학습 1회)</span>
-                            <span className="text-gray-800">+10 XP (출석)</span>
+                            {myTodayXpList.length === 0 ? (
+                                <span className="text-gray-800">오늘의 학습을 시작해보세요!</span>
+                            ) : (
+                                myTodayXpList.map((xpObj: any, idx: number) => {
+                                    let label = "";
+                                    if (typeof xpObj === 'string') label = xpObj;
+                                    else if (xpObj) {
+                                        const amount = xpObj.amount ?? xpObj.xp ?? 0;
+                                        const src = xpObj.reason || xpObj.source || xpObj.title || "지급";
+                                        label = `+${amount} XP (${src})`;
+                                    }
+                                    return <span key={idx} className="text-gray-800">{label}</span>;
+                                })
+                            )}
                         </div>
                     </div>
 
@@ -378,24 +549,27 @@ export default function DashboardPage() {
                             {/* 레벨 1~10 스크롤 리스트 */}
                             <div className="flex flex-col gap-2 flex-[0.7] overflow-y-auto custom-scrollbar pr-1 pb-2">
                                 {LEVELS.map((item) => {
+                                    const isCurrent = item.lv === myLevel;
+                                    const isNext = item.lv === (myLevel + 1);
+
                                     let bgClass = "bg-[#F3F4F6] text-gray-400";
                                     let textClass = "text-gray-500 font-bold";
                                     let lvTextClass = "text-gray-400";
 
-                                    if (item.isCurrent) {
+                                    if (isCurrent) {
                                         bgClass = "bg-[#FDE047] border border-[#FACC15] shadow-sm";
                                         textClass = "text-gray-800 font-extrabold";
                                         lvTextClass = "text-[#854D0E]";
-                                    } else if (item.isNext) {
+                                    } else if (isNext) {
                                         bgClass = "bg-white border border-[#FDE047]";
                                         textClass = "text-gray-400 font-bold";
-                                    } else if (item.lv > 8) {
+                                    } else if (item.lv > myLevel + 1) {
                                         bgClass = "bg-white border border-gray-200";
                                     }
 
                                     return (
-                                        <div 
-                                            key={item.lv} 
+                                        <div
+                                            key={item.lv}
                                             className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl shrink-0 gap-1.5 cursor-pointer hover:scale-[1.02] transition-all ${bgClass}`}
                                             onClick={() => setClickedLevel(clickedLevel === item.lv ? null : item.lv)}
                                         >
@@ -404,10 +578,10 @@ export default function DashboardPage() {
                                                 <span className={`text-[11px] ${textClass} truncate`}>{item.name}</span>
                                             </div>
 
-                                            {item.isCurrent && (
+                                            {isCurrent && (
                                                 <span className="bg-[#FDE047] text-[#854D0E] text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm shrink-0">현재</span>
                                             )}
-                                            {item.isNext && (
+                                            {isNext && (
                                                 <span className="bg-[#FFFBEB] border border-[#FDE047] text-[#D97706] text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm shrink-0 hidden sm:block">다음 목표</span>
                                             )}
                                         </div>
@@ -418,16 +592,16 @@ export default function DashboardPage() {
                             {/* 레벨별 캐릭터 이미지 중심축 표시 박스 */}
                             <div className="flex-[1.3] h-full min-h-[160px] bg-white rounded-[24px] flex items-center justify-center shrink-0 border-[3px] border-gray-50 shadow-sm relative overflow-hidden transition-all duration-300">
                                 <Image
-                                    key={displayLevel} 
+                                    key={displayLevel}
                                     src={`/character/LV ${displayLevel}.png`}
                                     alt={`레벨 ${displayLevel} 캐릭터`}
                                     fill
                                     className="object-contain p-6 animate-[fadeIn_0.2s_ease-in-out]"
-                                    style={{ 
-                                        transform: `scale(${0.65 + (displayLevel * 0.055)})`, 
-                                        transformOrigin: 'center center' 
+                                    style={{
+                                        transform: `scale(${0.65 + (displayLevel * 0.055)})`,
+                                        transformOrigin: 'center center'
                                     }}
-                                    unoptimized 
+                                    unoptimized
                                 />
                             </div>
                         </div>
@@ -485,7 +659,9 @@ export default function DashboardPage() {
                                                 <div className="bg-white border-2 border-[#CEFA93] text-gray-800 text-[15px] font-medium px-6 py-4 rounded-[24px] rounded-bl-md whitespace-pre-wrap max-w-lg leading-relaxed shadow-sm">
                                                     {msg.text}
                                                 </div>
-                                                <span className="text-[#84CC16] text-2xl cursor-pointer hover:scale-110 transition-transform">🔊</span>
+                                                {msg.audioUrl && (
+                                                    <span onClick={() => new Audio(msg.audioUrl!).play()} className="text-[#84CC16] text-xl cursor-pointer hover:scale-110 transition-transform opacity-80 hover:opacity-100">🔊</span>
+                                                )}
                                             </div>
                                         </div>
                                     )}

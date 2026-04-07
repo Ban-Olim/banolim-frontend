@@ -132,4 +132,39 @@ export const api = {
       body: JSON.stringify(data),
     });
   },
+
+  /** 문장 분해 오답노트 조회 */
+  getSentenceAttempts() {
+    return request<any[]>("/api/users/me/sentences/attempts");
+  },
+
+  /** 문장 분해 오답 상세 조회 */
+  getSentenceAttemptDetail(problemId: number) {
+    return request<any>(`/api/users/me/sentences/attempts/${problemId}`);
+  },
+
+  /** 대화한 챗봇 목록 조회 */
+  getChatSessions() {
+    return request<any[]>("/api/users/me/chat");
+  },
+
+  /** 챗봇 대화 로그 조회 */
+  getChatLog(sessionId: number) {
+    return request<any[]>(`/api/users/me/chat/${sessionId}`);
+  },
+
+  /** 출석체크 도장 조회 */
+  getAttendanceStamps(year: number, month: number) {
+    return request<any[]>(`/api/users/me/stamps?year=${year}&month=${month}`);
+  },
+
+  /** 출석체크 수행 */
+  checkAttendance() {
+    return request<any>("/api/attendance/check", { method: "POST" });
+  },
+
+  /** 나의 등급 조회 */
+  getUserLevel() {
+    return request<any>("/api/users/me/level");
+  },
 };
