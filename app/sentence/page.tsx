@@ -28,8 +28,6 @@ const OPTION_COLORS = [
   "bg-[#E1FCFF] border-[#7DF2FF]",
 ];
 
-const DIFFICULTY = 2;
-
 export default function SentencePage() {
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<
@@ -39,24 +37,35 @@ export default function SentencePage() {
   const [availableWords, setAvailableWords] = useState<WordChip[]>([]);
   const [slots, setSlots] = useState<SlotState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [problemIndex, setProblemIndex] = useState(0);
+  const [allDone, setAllDone] = useState(false);
 
-  const { data: problem, isLoading, isError } = useQuery({
-    queryKey: ["sentencePractice", DIFFICULTY],
-    queryFn: () => api.getSentencePractice(DIFFICULTY),
+  const {
+    data: problems,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["sentencePractice"],
+    queryFn: () => api.getSentencePractice(),
   });
 
-  // 문제 로드 시 슬롯/단어 초기화
+  const problem = problems?.[problemIndex];
+
+  // 문제 변경 시 슬롯/단어 초기화
   useEffect(() => {
     if (!problem) return;
+    // 빈 correctAnswer 슬롯(슬롯라벨도 빈 것) 제외
+    const activeSlots = problem.sentenceData.slots.filter(
+      (s) => s.slotLabel !== "" || s.correctAnswer !== "",
+    );
     const words: WordChip[] = problem.sentenceData.options.map((text, i) => ({
       id: `w${i}`,
       text,
       colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
     }));
     setAvailableWords(words);
-    setSlots(
-      problem.sentenceData.slots.map((slot) => ({ ...slot, currentWord: null })),
-    );
+    setSlots(activeSlots.map((slot) => ({ ...slot, currentWord: null })));
+    setActiveModal("none");
   }, [problem]);
 
   const handleDragStart = (word: WordChip) => setDraggedWord(word);
@@ -98,12 +107,15 @@ export default function SentencePage() {
     }
     setIsSubmitting(true);
     try {
-      const answers = slots.map((s) => s.currentWord!.text);
+      const userAnswers: Record<string, string> = {};
+      slots.forEach((s) => {
+        userAnswers[String(s.slotOrder)] = s.currentWord!.text;
+      });
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
-        answers,
+        userAnswers,
       });
-      setActiveModal(result.correct ? "correct" : "incorrect");
+      setActiveModal(result.isCorrect ? "correct" : "incorrect");
     } catch {
       // 제출 실패 시 클라이언트 검증으로 폴백
       const allCorrect = slots.every(
@@ -115,6 +127,16 @@ export default function SentencePage() {
     }
   };
 
+  const handleNext = () => {
+    if (!problems) return;
+    if (problemIndex + 1 >= problems.length) {
+      setAllDone(true);
+    } else {
+      setProblemIndex((i) => i + 1);
+    }
+    setActiveModal("none");
+  };
+
   if (isLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -123,10 +145,42 @@ export default function SentencePage() {
     );
   }
 
-  if (isError || !problem) {
+  if (isError || !problems || problems.length === 0) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-red-500">문제를 불러오지 못했습니다.</p>
+      </main>
+    );
+  }
+
+  if (allDone) {
+    return (
+      <main
+        className="min-h-screen flex flex-col items-center justify-center gap-6"
+        style={{
+          backgroundImage: "url('/sentence_bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="bg-white/90 rounded-[32px] p-12 flex flex-col items-center shadow-lg max-w-sm w-full mx-4">
+          <div className="text-7xl mb-4">🎉</div>
+          <h2 className="font-display text-2xl font-bold text-gray-800 mb-2">
+            모두 완료!
+          </h2>
+          <p className="text-sm text-gray-500 text-center mb-8">
+            {problems.length}개 문제를 모두 풀었어요!
+          </p>
+          <button
+            onClick={() => {
+              setProblemIndex(0);
+              setAllDone(false);
+            }}
+            className="w-48 h-12 bg-[#C6FA98] text-green-800 rounded-xl text-sm font-semibold hover:brightness-95 transition-all"
+          >
+            다시 풀기
+          </button>
+        </div>
       </main>
     );
   }
@@ -153,12 +207,32 @@ export default function SentencePage() {
         </button>
       </header>
 
+      {/* 진행률 */}
+      <div className="mx-8 mb-2 z-10">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <span>
+            {problemIndex + 1} / {problems.length}
+          </span>
+          <span>
+            {Math.round(((problemIndex + 1) / problems.length) * 100)}%
+          </span>
+        </div>
+        <div className="w-full h-2 bg-white/60 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#C6FA98] rounded-full transition-all duration-500"
+            style={{
+              width: `${((problemIndex + 1) / problems.length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
       {/* 메인 */}
-      <div className="flex-1 flex flex-col items-center pt-6 px-4 z-10 w-full max-w-[860px] mx-auto">
+      <div className="flex-1 flex flex-col items-center pt-4 px-4 z-10 w-full max-w-[860px] mx-auto">
         {/* 문장 바 */}
         <div className="bg-[#F2FEE6]/90 border border-[#cff3af] rounded-2xl px-8 py-4 mb-8 flex items-center shadow-sm w-full max-h-15 max-w-[600px]">
           <span className="flex-1 text-center text-s-18b font-bold text-gray-800">
-            {problem.sentenceText}
+            {problem!.sentenceText}
           </span>
           <button className="hover:scale-110 transition-transform flex-shrink-0">
             <Image src="/images/sound.png" alt="소리" width={28} height={28} />
@@ -240,8 +314,10 @@ export default function SentencePage() {
         isOpen={activeModal !== "none"}
         type={activeModal}
         onClose={() => setActiveModal("none")}
-        onNext={() => setActiveModal("none")}
-        hintSlots={problem.sentenceData.slots}
+        onNext={handleNext}
+        hintSlots={problem!.sentenceData.slots.filter(
+          (s) => s.slotLabel !== "",
+        )}
       />
     </main>
   );

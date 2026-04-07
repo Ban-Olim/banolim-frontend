@@ -66,9 +66,15 @@ export interface SentenceProblem {
   };
 }
 
+export interface SlotResult {
+  isCorrect: boolean;
+  correctAnswer: string;
+}
+
 export interface SubmitResult {
-  correct: boolean;
-  correctAnswers?: string[];
+  xpGranted: boolean;
+  isCorrect: boolean;
+  results: Record<string, SlotResult>;
 }
 
 export interface MessageResponse {
@@ -119,14 +125,15 @@ export const api = {
   },
 
   /** 문장 분해 문제 조회 */
-  getSentencePractice(difficulty: number) {
-    return request<SentenceProblem>(
-      `/api/sentences/practice?difficulty=${difficulty}`,
-    );
+  getSentencePractice() {
+    return request<SentenceProblem[]>("/api/sentences/practice");
   },
 
   /** 문장 분해 답변 제출 */
-  submitSentence(data: { sentenceProblemId: number; answers: string[] }) {
+  submitSentence(data: {
+    sentenceProblemId: number;
+    userAnswers: Record<string, string>;
+  }) {
     return request<SubmitResult>("/api/sentenses/submit", {
       method: "POST",
       body: JSON.stringify(data),
