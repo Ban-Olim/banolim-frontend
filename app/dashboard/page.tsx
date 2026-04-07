@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from "next/image";
 
 // --- 타입 정의 ---
 type WordType = 'subject' | 'time' | 'place' | 'action';
@@ -96,16 +97,17 @@ const CHAT_LOGS: ChatLog[] = [
 
 // 레벨 1~10 데이터
 const LEVELS = [
-    { lv: 1, name: "옹알이" },
-    { lv: 2, name: "단어 봇" },
-    { lv: 3, name: "짧은 문장러" },
-    { lv: 4, name: "대화 초보" },
-    { lv: 5, name: "수다쟁이" },
-    { lv: 6, name: "가나다라" },
+    { lv: 0, name: "단어 옹알이" },
+    { lv: 1, name: "단어 걸음마" },
+    { lv: 2, name: "단어 수집가" },
+    { lv: 3, name: "문장 퍼즐러" },
+    { lv: 4, name: "문장 조립꾼" },
+    { lv: 5, name: "표현 탐험가" },
+    { lv: 6, name: "대화 샛별" },
     { lv: 7, name: "실전 대화러", isCurrent: true },
-    { lv: 8, name: "상황 마스터", isNext: true },
-    { lv: 9, name: "대화 리더" },
-    { lv: 10, name: "눈치코치 MVP" },
+    { lv: 8, name: "맥락 마스터", isNext: true },
+    { lv: 9, name: "언어 연금술사" },
+    { lv: 10, name: "반올리 마스터" },
 ];
 
 const getWordColorClass = (type: WordType) => {
@@ -137,6 +139,10 @@ export default function DashboardPage() {
     const [selectedMonth, setSelectedMonth] = useState(1); // 1월 기본
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+    const [clickedLevel, setClickedLevel] = useState<number | null>(null);
+    const currentLevel = LEVELS.find(l => l.isCurrent)?.lv || 0;
+    const displayLevel = clickedLevel !== null ? clickedLevel : currentLevel;
+
     const attendanceDays = [8, 9, 15, 16];
 
     const getCalendarDays = (year: number, month: number) => {
@@ -164,13 +170,23 @@ export default function DashboardPage() {
 
             {/* --- 상단 헤더 --- */}
             <header className="w-full max-w-[1500px] bg-white rounded-full py-3 px-6 flex justify-between items-center shadow-sm z-10 mb-5 shrink-0 border border-gray-100">
-                <div className="bg-[#CEFA93] text-green-900 font-extrabold px-8 py-2.5 rounded-full text-sm">
-                    로고
+                {/* 레이아웃 공간 유지를 위한 부모 (기존 크기 유지로 배치 무너짐 방지) */}
+                <div className="relative w-32 h-10 shrink-0">
+                    {/* 독단적으로 로고 크기만 키우기 위해 absolute 적용 */}
+                    <div className="absolute top-1/2 -translate-y-1/2 left-[-10px] w-52 h-20 z-20 pointer-events-none">
+                        <Image
+                            src="/logo.jpg"
+                            alt="로고"
+                            fill
+                            className="object-contain object-left"
+                            priority
+                        />
+                    </div>
                 </div>
                 <div className="font-extrabold text-xl text-gray-700 tracking-wide">
                     대시보드
                 </div>
-                <button onClick={() => window.location.href = '/'} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
+                <button onClick={() => window.location.href = '/main'} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
                     ✕
                 </button>
             </header>
@@ -181,7 +197,7 @@ export default function DashboardPage() {
                 {/* ========================================= */}
                 {/* 1. 왼쪽 영역 (학습 달력) */}
                 {/* ========================================= */}
-                <section className="w-full lg:flex-[1.2] flex flex-col h-full min-h-0 relative z-10 bg-white">
+                <section className="w-full lg:flex-[1.0] flex flex-col h-full min-h-0 relative z-10 bg-white">
 
                     <div className="flex justify-between items-end mb-6 shrink-0 px-2 mt-2">
                         <div className="flex items-center gap-2">
@@ -323,7 +339,7 @@ export default function DashboardPage() {
                 {/* ========================================= */}
                 {/* 3. 오른쪽 영역 (나의 등급 & 캐릭터) */}
                 {/* ========================================= */}
-                <section className="w-full lg:flex-[0.9] flex flex-col gap-6 h-full min-h-0 relative z-10">
+                <section className="w-full lg:flex-[1.4] flex flex-col gap-6 h-full min-h-0 relative z-10">
 
                     {/* 노란색 고리 장식 */}
                     <div className="absolute -top-4 left-6 w-3.5 h-10 bg-[#FDE047] rounded-full z-20 shadow-sm"></div>
@@ -360,7 +376,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between flex-1 min-h-0 gap-3 xl:gap-4">
 
                             {/* 레벨 1~10 스크롤 리스트 */}
-                            <div className="flex flex-col gap-2 flex-[1.2] overflow-y-auto custom-scrollbar pr-1 pb-2">
+                            <div className="flex flex-col gap-2 flex-[0.7] overflow-y-auto custom-scrollbar pr-1 pb-2">
                                 {LEVELS.map((item) => {
                                     let bgClass = "bg-[#F3F4F6] text-gray-400";
                                     let textClass = "text-gray-500 font-bold";
@@ -378,7 +394,11 @@ export default function DashboardPage() {
                                     }
 
                                     return (
-                                        <div key={item.lv} className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl shrink-0 gap-1.5 ${bgClass}`}>
+                                        <div 
+                                            key={item.lv} 
+                                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl shrink-0 gap-1.5 cursor-pointer hover:scale-[1.02] transition-all ${bgClass}`}
+                                            onClick={() => setClickedLevel(clickedLevel === item.lv ? null : item.lv)}
+                                        >
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className={`font-extrabold text-[10px] ${lvTextClass} shrink-0 whitespace-nowrap`}>Lv. {item.lv}</span>
                                                 <span className={`text-[11px] ${textClass} truncate`}>{item.name}</span>
@@ -395,9 +415,20 @@ export default function DashboardPage() {
                                 })}
                             </div>
 
-                            {/* 회색 캐릭터 박스 */}
-                            <div className="flex-[0.8] h-full min-h-[160px] bg-[#E5E7EB] rounded-[20px] flex items-center justify-center shrink-0 border-2 border-white shadow-inner">
-                                <span className="text-gray-400 font-extrabold text-sm">캐릭터</span>
+                            {/* 레벨별 캐릭터 이미지 중심축 표시 박스 */}
+                            <div className="flex-[1.3] h-full min-h-[160px] bg-white rounded-[24px] flex items-center justify-center shrink-0 border-[3px] border-gray-50 shadow-sm relative overflow-hidden transition-all duration-300">
+                                <Image
+                                    key={displayLevel} 
+                                    src={`/character/LV ${displayLevel}.png`}
+                                    alt={`레벨 ${displayLevel} 캐릭터`}
+                                    fill
+                                    className="object-contain p-6 animate-[fadeIn_0.2s_ease-in-out]"
+                                    style={{ 
+                                        transform: `scale(${0.65 + (displayLevel * 0.055)})`, 
+                                        transformOrigin: 'center center' 
+                                    }}
+                                    unoptimized 
+                                />
                             </div>
                         </div>
                     </div>

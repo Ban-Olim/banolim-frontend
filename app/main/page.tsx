@@ -4,52 +4,20 @@ import React from "react";
 import Image from "next/image";
 import MenuCard from "../../components/MenuCard";
 
-const Cloud = ({
-  className,
-  style,
-}: {
-  className: string;
-  style?: React.CSSProperties;
-}) => (
-  <svg
-    className={className}
-    style={style}
-    viewBox="0 0 100 60"
-    fill="white"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <circle cx="20" cy="35" r="15" />
-    <circle cx="40" cy="25" r="20" />
-    <circle cx="65" cy="25" r="22" />
-    <circle cx="85" cy="35" r="15" />
-    <rect x="20" y="30" width="65" height="20" />
-  </svg>
-);
-
 export default function Main() {
   return (
     <main className="min-h-screen bg-[#E6F4FF] flex flex-col items-center py-12 px-4 relative overflow-hidden font-sans">
-      {/* 배경 요소 */}
-      <div className="absolute inset-0 pointer-events-none">
-        <Cloud
-          className="absolute top-[5%] w-40 opacity-60 animate-cloud-fly"
-          style={{ animationDuration: "35s", animationDelay: "-2s" }}
+      {/* 배경 이미지 레이어 */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <Image
+          src="/background.jpg"
+          alt="배경 이미지"
+          fill
+          priority
+          className=" object-cover opacity-100" // opacity로 배경의 밝기를 조절하세요 (0~100)
         />
-        <Cloud
-          className="absolute top-[15%] w-64 opacity-40 animate-cloud-fly"
-          style={{ animationDuration: "50s", animationDelay: "-15s" }}
-        />
-        <Cloud
-          className="absolute top-[8%] right-[10%] w-56 opacity-50 animate-cloud-fly"
-          style={{ animationDuration: "40s", animationDelay: "-7s" }}
-        />
-        <Cloud
-          className="absolute top-[35%] w-80 opacity-30 animate-cloud-fly"
-          style={{ animationDuration: "60s", animationDelay: "-25s" }}
-        />
-
-        {/* 하단 그라데이션 */}
-        <div className="absolute bottom-0 w-full h-40 bg-gradient-to-t from-green-main/30 to-transparent" />
+        {/* 하단 그라데이션 (선택 사항: 하단을 부드럽게 처리하고 싶을 때 유지) */}
+        <div className="absolute bottom-0 w-full h-40 bg-gradient-to-t from-[#E6F4FF] to-transparent" />
       </div>
 
       <div className="z-20 w-full max-w-6xl flex flex-col items-center">
@@ -65,29 +33,53 @@ export default function Main() {
           />
         </div>
 
-        {/* 메뉴 카드 (디자인 시스템 컬러 적용) */}
+        {/* 메뉴 카드 그리드 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8 w-full px-4">
           <MenuCard
             title="문장 분해 연습"
             bgColor="bg-green-main"
             borderColor="border-green-dark"
-            icon="😊"
-            href="/practice"
+            icon={
+              <Image
+                src="/imoge1.png" // 다운로드한 이미지 경로
+                alt="연습 아이콘"
+                width={100}
+                height={80}
+                className="object-contain"
+              />
+            }
+            href="/sentence"
           />
 
           <MenuCard
             title="눈치코치"
             bgColor="bg-blue-main"
             borderColor="border-blue-dark"
-            icon="😁"
-            href="/coach"
+            icon={
+              <Image
+                src="/imoge2.png" // 다운로드한 이미지 경로
+                alt="눈치코치 아이콘"
+                width={100}
+                height={80}
+                className="object-contain scale-[1.25]"
+              />
+            }
+            href="/nunchikochi"
           />
 
           <MenuCard
             title="나만의 단어장"
-            bgColor="bg-pink-main"
+            bgColor="bg-[#FFD1D9]"
             borderColor="border-pink-dark"
-            icon="😍"
+            icon={
+              <Image
+                src="/imoge3.png" // 다운로드한 이미지 경로
+                alt="단어장 아이콘"
+                width={75}
+                height={80}
+                className="object-contain scale-[1.3]" // 여백 보정 확대
+              />
+            }
             href="/vocabulary"
           />
 
@@ -95,7 +87,15 @@ export default function Main() {
             title="대시보드"
             bgColor="bg-yellow-main"
             borderColor="border-yellow-dark"
-            icon="😎"
+            icon={
+              <Image
+                src="/imoge4.png" // 다운로드한 이미지 경로
+                alt="대시보드 아이콘"
+                width={100}
+                height={80}
+                className="object-contain scale-[1.25]" // 여백 보정 확대
+              />
+            }
             href="/dashboard"
           />
         </div>
