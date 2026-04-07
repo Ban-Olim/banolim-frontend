@@ -13,7 +13,14 @@ function OAuthHandler() {
     const accessToken = searchParams.get("accessToken");
     const needsOnboarding = searchParams.get("needsOnboarding");
 
+    console.log("[OAuth] URL params:", {
+      accessToken: accessToken ? accessToken.slice(0, 20) + "..." : null,
+      needsOnboarding,
+      fullUrl: window.location.href,
+    });
+
     if (!accessToken) {
+      console.log("[OAuth] accessToken 없음 → 홈으로 이동");
       router.replace("/");
       return;
     }
@@ -21,8 +28,10 @@ function OAuthHandler() {
     setAccessToken(accessToken);
 
     if (needsOnboarding === "true") {
+      console.log("[OAuth] 온보딩 필요 → /signup");
       router.replace("/signup");
     } else {
+      console.log("[OAuth] 온보딩 불필요 → /main");
       router.replace("/main");
     }
   }, []);
