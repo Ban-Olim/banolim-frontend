@@ -134,7 +134,7 @@ export const api = {
     sentenceProblemId: number;
     userAnswers: Record<string, string>;
   }) {
-    return request<SubmitResult>("/api/sentenses/submit", {
+    return request<SubmitResult>("/api/sentences/submit", {
       method: "POST",
       body: JSON.stringify(data),
     });
