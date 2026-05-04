@@ -100,11 +100,6 @@ export default function SentencePage() {
 
   const handleSubmit = async () => {
     if (!problem) return;
-    const allFilled = slots.every((s) => s.currentWord !== null);
-    if (!allFilled) {
-      alert("모든 빈칸을 채워주세요!");
-      return;
-    }
     setIsSubmitting(true);
     try {
       const userAnswers: Record<string, string> = {};

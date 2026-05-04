@@ -20,7 +20,11 @@ export const metadata: Metadata = {
   description: "",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ko" className={`${pretendard.variable} ${cafe24.variable}`}>
       <body className="font-sans antialiased text-gray-900">
