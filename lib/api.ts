@@ -93,8 +93,9 @@ export interface SentenceProblem {
 }
 
 export interface SubmitResult {
-  correct: boolean;
-  correctAnswers?: string[];
+  isCorrect: boolean;
+  xpGranted: boolean;
+  results?: Record<string, { isCorrect: boolean; correctAnswer: string }>;
 }
 
 export interface MessageResponse {
