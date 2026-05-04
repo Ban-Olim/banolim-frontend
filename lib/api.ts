@@ -127,7 +127,7 @@ export const api = {
 
   /** 문장 분해 답변 제출 */
   submitSentence(data: { sentenceProblemId: number; answers: string[] }) {
-    return request<SubmitResult>("/api/sentenses/submit", {
+    return request<SubmitResult>("/api/sentences/submit", {
       method: "POST",
       body: JSON.stringify(data),
     });
