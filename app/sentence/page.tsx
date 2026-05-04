@@ -104,13 +104,16 @@ export default function SentencePage() {
       slots.forEach((s) => {
         userAnswers[String(s.slotOrder)] = s.currentWord!.text;
       });
+      console.log("[제출] sentenceProblemId:", problem.sentenceProblemId, "userAnswers:", userAnswers);
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
         userAnswers,
       });
+      console.log("[제출] 성공 result:", JSON.stringify(result));
       setActiveModal(result.isCorrect ? "correct" : "incorrect");
-    } catch {
+    } catch (err) {
       // 제출 실패 시 클라이언트 검증으로 폴백
+      console.error("[제출] submitSentence 실패 → 클라이언트 폴백:", err);
       const allCorrect = slots.every(
         (s) => s.currentWord?.text === s.correctAnswer,
       );
