@@ -100,29 +100,36 @@ export default function DashboardPage() {
         api.getSentenceAttempts()
             .then(data => {
                 const res: any = data;
-                console.log("Raw sentence attempts data:", res);
+                console.log("[오답노트] 1. raw data:", JSON.stringify(res));
+                console.log("[오답노트] 2. type:", typeof res, "isArray:", Array.isArray(res));
                 let attemptsArray: any[] = [];
                 if (res) {
-                    if (Array.isArray(res)) attemptsArray = res;
-                    else if (res.data && Array.isArray(res.data)) attemptsArray = res.data;
-                    else if (res.content && Array.isArray(res.content)) attemptsArray = res.content;
-                    else if (res.attempts && Array.isArray(res.attempts)) attemptsArray = res.attempts;
+                    if (Array.isArray(res)) { attemptsArray = res; console.log("[오답노트] path: array"); }
+                    else if (res.data && Array.isArray(res.data)) { attemptsArray = res.data; console.log("[오답노트] path: res.data"); }
+                    else if (res.content && Array.isArray(res.content)) { attemptsArray = res.content; console.log("[오답노트] path: res.content"); }
+                    else if (res.attempts && Array.isArray(res.attempts)) { attemptsArray = res.attempts; console.log("[오답노트] path: res.attempts"); }
                     else {
                         const arrayVal = Object.values(res).find(val => Array.isArray(val));
-                        if (arrayVal) attemptsArray = arrayVal as any[];
+                        if (arrayVal) { attemptsArray = arrayVal as any[]; console.log("[오답노트] path: fallback"); }
+                        else { console.log("[오답노트] path: NO ARRAY FOUND. keys:", Object.keys(res)); }
                     }
+                } else {
+                    console.log("[오답노트] res is null/undefined!");
                 }
+                console.log("[오답노트] 3. attemptsArray length:", attemptsArray.length);
+                if (attemptsArray.length > 0) console.log("[오답노트] 4. first item:", JSON.stringify(attemptsArray[0]));
 
                 const normalized = attemptsArray.map((item: any, idx: number) => ({
-                    id: item.sentenceProblemId || item.problemId || item.id || idx,
+                    id: item.problemId || item.sentenceProblemId || item.sentenceAttemptId || item.id || idx,
                     question: item.sentenceText || item.question || item.text || "문제 내용 없음",
                     correctAnswer: item.correctAnswer || item.answer || item.sentenceText || "정답 정보 없음",
                     attempts: item.attempts || []
                 }));
+                console.log("[오답노트] 5. normalized:", normalized.length, "items");
                 setIncorrectNotes(normalized);
             })
             .catch(error => {
-                console.error("Failed to fetch sentence attempts:", error);
+                console.error("[오답노트] FETCH ERROR:", error);
             });
 
         api.getChatSessions()
@@ -258,8 +265,10 @@ export default function DashboardPage() {
         try {
             const detail = await api.getSentenceAttemptDetail(note.id);
             let attemptsArray: Word[][] = [];
-            if (detail && detail.attempts && Array.isArray(detail.attempts)) {
-                attemptsArray = detail.attempts.map((att: any) => {
+            
+            const attemptsList = detail?.details || detail?.attempts || [];
+            if (Array.isArray(attemptsList) && attemptsList.length > 0) {
+                attemptsArray = attemptsList.map((att: any) => {
                     const answersMap = att.userAnswers || {};
                     return Object.keys(answersMap).sort((a, b) => parseInt(a) - parseInt(b)).map(key => {
                         const types: WordType[] = ['time', 'subject', 'action', 'place'];

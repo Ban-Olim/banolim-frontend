@@ -40,22 +40,24 @@ export default function SentencePage() {
   const [slots, setSlots] = useState<SlotState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: problem, isLoading, isError } = useQuery({
+  const { data: rawProblem, isLoading, isError } = useQuery({
     queryKey: ["sentencePractice", DIFFICULTY],
     queryFn: () => api.getSentencePractice(DIFFICULTY),
   });
 
+  const problem = (Array.isArray(rawProblem) ? rawProblem[0] : rawProblem) as any;
+
   // 문제 로드 시 슬롯/단어 초기화
   useEffect(() => {
-    if (!problem) return;
-    const words: WordChip[] = problem.sentenceData.options.map((text, i) => ({
+    if (!problem || !problem.sentenceData) return;
+    const words: WordChip[] = problem.sentenceData.options.map((text: string, i: number) => ({
       id: `w${i}`,
       text,
       colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
     }));
     setAvailableWords(words);
     setSlots(
-      problem.sentenceData.slots.map((slot) => ({ ...slot, currentWord: null })),
+      problem.sentenceData.slots.map((slot: any) => ({ ...slot, currentWord: null })),
     );
   }, [problem]);
 
@@ -98,10 +100,13 @@ export default function SentencePage() {
     }
     setIsSubmitting(true);
     try {
-      const answers = slots.map((s) => s.currentWord!.text);
+      const userAnswers: Record<string, string> = {};
+      slots.forEach((s) => {
+        userAnswers[String(s.slotOrder)] = s.currentWord!.text;
+      });
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
-        answers,
+        userAnswers,
       });
       setActiveModal(result.correct ? "correct" : "incorrect");
     } catch {
