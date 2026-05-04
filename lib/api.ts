@@ -42,12 +42,16 @@ export interface CharacterListItem {
   cardImage?: string;
 }
 
-export interface CharacterDetail extends CharacterListItem {
-  quest: string;
-  description: string;
+export interface CharacterDetail {
+  characterId: number;
+  name: string;
+  age: number;
+  personalityLabel: string;
+  likeTags: string[];
+  dislikeTags: string[];
+  warningTags: string[];
+  personality: string;
   speechStyle: string;
-  likes: string;
-  dislikes: string;
   specialNote: string;
 }
 
@@ -77,9 +81,48 @@ export interface SubmitResult {
   results: Record<string, SlotResult>;
 }
 
-export interface MessageResponse {
-  reply: string;
-  moodPercent?: number;
+export interface GraphWord {
+  senseId: string;
+  word: string;
+  pos: string;
+  definition: string;
+}
+
+export interface WordSearchResult {
+  senseId: string;
+  word: string;
+  pos: string;
+  definition: string;
+}
+
+interface WordSearchRaw {
+  word: string;
+  senses: { id: number; definition: string; partOfSpeech: string }[];
+}
+
+export interface WordExample {
+  example_sentence: string;
+  translation: string;
+}
+
+export interface ChatMessage {
+  chatId: number;
+  speaker: "BOT" | "USER";
+  message: string;
+  audioUrl: string | null;
+  createdAt: string;
+}
+
+export interface SessionResponse {
+  sessionId: number;
+  messages: ChatMessage[];
+  temperature: number;
+}
+
+export interface MessageSendResponse {
+  message: string;
+  temperature: number;
+  audioUrl: string | null;
 }
 
 // ── API ────────────────────────────────────────────────────────────────────
@@ -110,7 +153,7 @@ export const api = {
 
   /** 대화 세션 시작 */
   createSession(characterId: number) {
-    return request<{ sessionId: number }>("/api/chat/sessions", {
+    return request<SessionResponse>("/api/chat/sessions", {
       method: "POST",
       body: JSON.stringify({ characterId }),
     });
@@ -118,10 +161,55 @@ export const api = {
 
   /** 챗봇과 대화 */
   sendMessage(sessionId: number, message: string) {
-    return request<MessageResponse>(
+    return request<MessageSendResponse>(
       `/api/chat/sessions/${sessionId}/messages`,
       { method: "POST", body: JSON.stringify({ message }) },
     );
+  },
+
+  /** 지식그래프 조회 */
+  async getGraph() {
+    const res = await request<{ nodes: { id: string; label: string; group: string; definition: string }[] } | null>("/api/graph");
+    return (res?.nodes ?? []).map((n) => ({
+      senseId: n.id,
+      word: n.label,
+      pos: n.group,
+      definition: n.definition,
+    }));
+  },
+
+  /** 지식그래프 단어 삭제 */
+  deleteGraphWord(senseId: string) {
+    return request<void>(`/api/graph/${senseId}`, { method: "DELETE" });
+  },
+
+  /** 단어 검색 */
+  async searchWords(keyword: string) {
+    const res = await request<{ items: WordSearchRaw[]; totalCount: number }>(
+      `/api/words/search?keyword=${encodeURIComponent(keyword)}`,
+    );
+    return (res?.items ?? []).flatMap((item) =>
+      item.senses.map((s) => ({
+        senseId: String(s.id),
+        word: item.word,
+        pos: s.partOfSpeech,
+        definition: s.definition,
+      })),
+    );
+  },
+
+  /** 단어 추가 */
+  addWord(senseId: string) {
+    return request<void>(`/api/words/${senseId}`, { method: "PUT" });
+  },
+
+  /** 예문 생성 */
+  async getExample(senseId: string) {
+    const res = await request<WordExample>("/api/words/example", {
+      method: "POST",
+      body: JSON.stringify({ senseId }),
+    });
+    return res;
   },
 
   /** 문장 분해 문제 조회 */

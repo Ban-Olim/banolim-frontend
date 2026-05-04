@@ -36,6 +36,7 @@ interface Message {
   sender: "character" | "user";
   text: string;
   isTyping?: boolean;
+  audioUrl?: string | null;
 }
 
 function BackgroundDecorations() {
@@ -72,6 +73,7 @@ export default function NunchikochePage() {
   const [view, setView] = useState<"selection" | "chat">("selection");
   const [openCardId, setOpenCardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isListOpen, setIsListOpen] = useState(true);
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [moodPercent, setMoodPercent] = useState(30);
@@ -85,10 +87,7 @@ export default function NunchikochePage() {
   >({});
 
   // 캐릭터 목록 조회
-  const {
-    data: rawCharacters = [],
-    isLoading: isLoadingChars,
-  } = useQuery({
+  const { data: rawCharacters = [], isLoading: isLoadingChars } = useQuery({
     queryKey: ["characters"],
     queryFn: api.getCharacters,
   });
@@ -118,7 +117,7 @@ export default function NunchikochePage() {
   );
 
   const handleSend = async () => {
-    if (!inputText.trim() || !sessionId || isSending) return;
+    if (!inputText.trim() || sessionId === null || isSending) return;
     const userText = inputText;
     setInputText("");
     setIsSending(true);
@@ -131,15 +130,23 @@ export default function NunchikochePage() {
 
     try {
       const res = await api.sendMessage(sessionId, userText);
-      const newMood = res.moodPercent ?? Math.min(moodPercent + 20, 100);
+      const newMood = res.temperature;
       setMoodPercent(newMood);
       setMessages((prev) =>
         prev.map((m) =>
-          m.isTyping ? { ...m, text: res.reply, isTyping: false } : m,
+          m.isTyping
+            ? {
+                ...m,
+                text: res.message,
+                isTyping: false,
+                audioUrl: res.audioUrl,
+              }
+            : m,
         ),
       );
       if (newMood >= 100) setTimeout(() => setShowSuccess(true), 300);
-    } catch {
+    } catch (e) {
+      console.error("[sendMessage error]", e);
       setMessages((prev) =>
         prev.map((m) =>
           m.isTyping
@@ -153,32 +160,35 @@ export default function NunchikochePage() {
   };
 
   const handleStartChat = async (char: CharacterListItem) => {
+    console.log("[handleStartChat] called", char.characterId);
     setChatChar(char);
     setMoodPercent(30);
     setSessionId(null);
-    setMessages([{ id: "m1", sender: "character", text: "", isTyping: true }]);
+    setMessages([
+      { id: "loading", sender: "character", text: "", isTyping: true },
+    ]);
     setOpenCardId(null);
     setView("chat");
 
     try {
-      const { sessionId: sid } = await api.createSession(char.characterId);
+      const res = await api.createSession(char.characterId);
+      console.log("[createSession] raw response", res);
+      const { sessionId: sid, messages: initMessages, temperature } = res;
+      console.log("[createSession] sid:", sid, "msgs:", initMessages, "temp:", temperature);
       setSessionId(sid);
+      setMoodPercent(temperature ?? 30);
+      setMessages(
+        (initMessages ?? []).map((m) => ({
+          id: `chat-${m.chatId}`,
+          sender: m.speaker === "BOT" ? ("character" as const) : ("user" as const),
+          text: m.message,
+          audioUrl: m.audioUrl,
+        })),
+      );
+    } catch (e) {
+      console.error("[createSession error]", e);
       setMessages([
-        {
-          id: "m1",
-          sender: "character",
-          text: `안녕하세요! 저는 ${char.name}이에요.`,
-          isTyping: false,
-        },
-      ]);
-    } catch {
-      setMessages([
-        {
-          id: "m1",
-          sender: "character",
-          text: "세션을 시작하지 못했습니다.",
-          isTyping: false,
-        },
+        { id: "err", sender: "character", text: "세션을 시작하지 못했습니다." },
       ]);
     }
   };
@@ -221,7 +231,9 @@ export default function NunchikochePage() {
                         className="object-cover w-full h-full"
                       />
                     </div>
-                    <span className="text-xs text-gray-500">{chatChar.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {chatChar.name}
+                    </span>
                     <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-400 rounded-full transition-all duration-500"
@@ -267,15 +279,17 @@ export default function NunchikochePage() {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) =>
-                  e.key === "Enter" && !e.nativeEvent.isComposing && handleSend()
+                  e.key === "Enter" &&
+                  !e.nativeEvent.isComposing &&
+                  handleSend()
                 }
                 placeholder="입력해주세요"
-                disabled={isSending || !sessionId}
+                disabled={isSending || sessionId === null}
                 className="flex-1 h-16 px-5 rounded-full bg-[#FAFAFA] border border-[#BABABA] shadow-[8px_8px_8px_rgba(94,94,94,0.04)] focus:outline-none focus:border-[#C6FA98] text-sm disabled:opacity-60"
               />
               <button
                 onClick={handleSend}
-                disabled={isSending || !sessionId}
+                disabled={isSending || sessionId === null}
                 className="h-16 px-5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-60"
               >
                 보내기 ↑
@@ -338,63 +352,84 @@ export default function NunchikochePage() {
 
       <div className="flex gap-3 mx-3 mb-3 z-10 flex-1 min-h-0">
         {/* 왼쪽 – 성격 목록 */}
-        <div className="w-64 md:w-80 bg-white/80 backdrop-blur-sm rounded-3xl p-5 shadow-sm flex flex-col gap-3 overflow-hidden flex-shrink-0">
-          <h2 className="font-bold text-gray-800">성격 목록</h2>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-              🔍
-            </span>
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="검색 (예: 소심, 공룡)"
-              className="w-full h-11 pl-8 pr-3 bg-white border border-[#ECECEC] rounded-xl text-sm focus:outline-none focus:border-[#C6FA98]"
-            />
+        <div
+          className={`bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col gap-3 overflow-hidden flex-shrink-0 transition-all duration-300
+            ${isListOpen ? "w-64 md:w-80 p-5" : "w-12 p-3"}`}
+        >
+          <div className="flex items-center justify-between min-w-0">
+            {isListOpen && (
+              <h2 className="font-bold text-gray-800">성격 목록</h2>
+            )}
+            <button
+              onClick={() => setIsListOpen((v) => !v)}
+              className={`w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-colors flex-shrink-0
+                ${isListOpen ? "ml-auto" : "mx-auto"}`}
+              aria-label={isListOpen ? "목록 닫기" : "목록 열기"}
+            >
+              {isListOpen ? "✕" : "☰"}
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2 overflow-y-auto flex-1">
-            {isLoadingChars ? (
-              <p className="text-sm text-gray-400 text-center py-4">
-                불러오는 중...
-              </p>
-            ) : (
-              filteredChars.map((char) => (
-                <button
-                  key={char.characterId}
-                  onClick={() => handleCardClick(char)}
-                  className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${
-                    openCardId === char.characterId
-                      ? "border-[#C6FA98] bg-[#F2FEE6]"
-                      : "border-gray-200 bg-white hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-semibold text-sm text-gray-800">
-                      {char.name}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {char.age}세 · {char.personalityLabel}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(char.likeTags ?? []).map((t) => (
-                      <span
-                        key={t}
-                        className="px-2 py-0.5 bg-[#E5F5D8] text-green-700 rounded-full text-xs"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                    {char.warningTag && (
-                      <span className="px-2 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs">
-                        {char.warningTag}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
+          {isListOpen && (
+            <>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/search.png" alt="search" className="w-4 h-4" style={{ mixBlendMode: "multiply" }} />
+                </span>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="검색 (예: 소심, 공룡)"
+                  className="w-full h-11 pl-8 pr-3 bg-white border border-[#ECECEC] rounded-xl text-sm focus:outline-none focus:border-[#C6FA98]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 overflow-y-auto flex-1">
+                {isLoadingChars ? (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    불러오는 중...
+                  </p>
+                ) : (
+                  filteredChars.map((char) => (
+                    <button
+                      key={char.characterId}
+                      onClick={() => handleCardClick(char)}
+                      className={`w-full text-left p-3 rounded-2xl border-2 transition-all ${
+                        openCardId === char.characterId
+                          ? "border-[#C6FA98] bg-[#F2FEE6]"
+                          : "border-gray-200 bg-white hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="font-semibold text-sm text-gray-800">
+                          {char.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {char.age}세 · {char.personalityLabel}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(char.likeTags ?? []).map((t) => (
+                          <span
+                            key={t}
+                            className="px-2 py-0.5 bg-[#E5F5D8] text-green-700 rounded-full text-xs"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                        {char.warningTag && (
+                          <span className="px-2 py-0.5 bg-[#FFF8D6] text-yellow-700 rounded-full text-xs">
+                            {char.warningTag}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* 오른쪽 – 성격 카드 */}
@@ -418,14 +453,17 @@ export default function NunchikochePage() {
                   <div className="flex-shrink-0 bg-white/95 px-4 pt-3 pb-2 text-center">
                     <p className="text-xs text-gray-400">퀘스트</p>
                     <p className="text-xs font-semibold text-gray-600">
-                      {detail?.quest ?? "마음 온도계 100%로 채우기"}
+                      마음 온도계 100%로 채우기
                     </p>
                   </div>
 
                   {/* 이미지 */}
                   <div className="flex-1 relative min-h-0">
                     <Image
-                      src={char.cardImage ?? CARD_IMAGES[index % CARD_IMAGES.length]}
+                      src={
+                        char.cardImage ??
+                        CARD_IMAGES[index % CARD_IMAGES.length]
+                      }
                       alt={char.name}
                       fill
                       className="object-cover"
@@ -481,7 +519,7 @@ export default function NunchikochePage() {
                           <div>
                             <p className="text-xs text-gray-400 mb-0.5">성격</p>
                             <p className="text-xs text-gray-700 leading-relaxed">
-                              {detail.description}
+                              {detail.personality}
                             </p>
                           </div>
                           <div>
@@ -496,7 +534,7 @@ export default function NunchikochePage() {
                                 좋아하는 것
                               </p>
                               <p className="text-xs text-gray-700">
-                                {detail.likes}
+                                {detail.likeTags.join(", ")}
                               </p>
                             </div>
                             <div>
@@ -513,7 +551,7 @@ export default function NunchikochePage() {
                               싫어하는 것
                             </p>
                             <p className="text-xs text-gray-700">
-                              {detail.dislikes}
+                              {detail.dislikeTags.join(", ")}
                             </p>
                           </div>
                         </>
