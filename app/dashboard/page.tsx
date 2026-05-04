@@ -101,31 +101,46 @@ export default function DashboardPage() {
             .then(data => {
                 const res: any = data;
                 console.log("[오답노트] 1. raw data:", JSON.stringify(res));
-                console.log("[오답노트] 2. type:", typeof res, "isArray:", Array.isArray(res));
+                // request()가 isSuccess+data 래퍼를 벗겨서 SentenceAttemptListRes { attempts: [...] } 를 반환함
                 let attemptsArray: any[] = [];
                 if (res) {
-                    if (Array.isArray(res)) { attemptsArray = res; console.log("[오답노트] path: array"); }
-                    else if (res.data && Array.isArray(res.data)) { attemptsArray = res.data; console.log("[오답노트] path: res.data"); }
-                    else if (res.content && Array.isArray(res.content)) { attemptsArray = res.content; console.log("[오답노트] path: res.content"); }
-                    else if (res.attempts && Array.isArray(res.attempts)) { attemptsArray = res.attempts; console.log("[오답노트] path: res.attempts"); }
-                    else {
+                    if (Array.isArray(res)) {
+                        attemptsArray = res;
+                    } else if (res.attempts && Array.isArray(res.attempts)) {
+                        attemptsArray = res.attempts; // 올바른 경로: SentenceAttemptListRes.attempts
+                    } else if (res.data && Array.isArray(res.data)) {
+                        attemptsArray = res.data;
+                    } else if (res.content && Array.isArray(res.content)) {
+                        attemptsArray = res.content;
+                    } else {
                         const arrayVal = Object.values(res).find(val => Array.isArray(val));
-                        if (arrayVal) { attemptsArray = arrayVal as any[]; console.log("[오답노트] path: fallback"); }
-                        else { console.log("[오답노트] path: NO ARRAY FOUND. keys:", Object.keys(res)); }
+                        if (arrayVal) attemptsArray = arrayVal as any[];
+                        else console.warn("[오답노트] 배열을 찾을 수 없음. keys:", Object.keys(res));
                     }
-                } else {
-                    console.log("[오답노트] res is null/undefined!");
                 }
-                console.log("[오답노트] 3. attemptsArray length:", attemptsArray.length);
-                if (attemptsArray.length > 0) console.log("[오답노트] 4. first item:", JSON.stringify(attemptsArray[0]));
+                console.log("[오답노트] attemptsArray:", attemptsArray.length, "items", attemptsArray[0]);
 
-                const normalized = attemptsArray.map((item: any, idx: number) => ({
-                    id: item.problemId || item.sentenceProblemId || item.sentenceAttemptId || item.id || idx,
-                    question: item.sentenceText || item.question || item.text || "문제 내용 없음",
-                    correctAnswer: item.correctAnswer || item.answer || item.sentenceText || "정답 정보 없음",
-                    attempts: item.attempts || []
-                }));
-                console.log("[오답노트] 5. normalized:", normalized.length, "items");
+                // AttemptList 스펙: { sentenceAttemptId, sentenceText, attemptCount, submittedAt }
+                // problemId 기준으로 중복 제거 후 오답노트 목록 구성 (상세는 클릭 시 로드)
+                const seen = new Set<number>();
+                const normalized = attemptsArray
+                    .map((item: any, idx: number) => {
+                        // sentenceAttemptId는 시도 ID, problemId는 문제 ID (상세 조회 시 사용)
+                        const id = item.sentenceProblemId ?? item.problemId ?? item.sentenceAttemptId ?? item.id ?? idx;
+                        return {
+                            id,
+                            question: item.sentenceText || item.question || item.text || "문제 내용 없음",
+                            correctAnswer: item.sentenceText || item.correctAnswer || item.answer || "정답 정보 없음",
+                            attempts: []
+                        };
+                    })
+                    .filter((note: any) => {
+                        // 같은 문제 중복 제거
+                        if (seen.has(note.id)) return false;
+                        seen.add(note.id);
+                        return true;
+                    });
+                console.log("[오답노트] normalized:", normalized.length, "items");
                 setIncorrectNotes(normalized);
             })
             .catch(error => {

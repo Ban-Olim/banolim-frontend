@@ -108,7 +108,7 @@ export default function SentencePage() {
         sentenceProblemId: problem.sentenceProblemId,
         userAnswers,
       });
-      setActiveModal(result.correct ? "correct" : "incorrect");
+      setActiveModal(result.isCorrect ? "correct" : "incorrect");
     } catch {
       // 제출 실패 시 클라이언트 검증으로 폴백
       const allCorrect = slots.every(
