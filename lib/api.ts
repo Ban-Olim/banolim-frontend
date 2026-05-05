@@ -102,11 +102,7 @@ export interface SubmitResult {
   results?: Record<string, { isCorrect: boolean; correctAnswer: string }>;
 }
 
-export interface SubmitResult {
-  xpGranted: boolean;
-  isCorrect: boolean;
-  results: Record<string, SlotResult>;
-}
+
 
 export interface GraphWord {
   senseId: string;

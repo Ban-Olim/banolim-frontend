@@ -40,12 +40,12 @@ export default function SentencePage() {
   const [problemIndex, setProblemIndex] = useState(0);
   const [allDone, setAllDone] = useState(false);
 
-  const { data: rawProblem, isLoading, isError } = useQuery({
-    queryKey: ["sentencePractice", DIFFICULTY],
-    queryFn: () => api.getSentencePractice(DIFFICULTY),
+  const { data: problems, isLoading, isError } = useQuery({
+    queryKey: ["sentencePractice"],
+    queryFn: () => api.getSentencePractice(),
   });
 
-  const problem = (Array.isArray(rawProblem) ? rawProblem[0] : rawProblem) as any;
+  const problem = problems && problems.length > 0 ? problems[problemIndex] : null;
 
   // 문제 로드 시 슬롯/단어 초기화
   useEffect(() => {
