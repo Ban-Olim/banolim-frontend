@@ -192,7 +192,7 @@ export default function DashboardPage() {
                         return null;
                     }).filter(Boolean) as string[];
                 }
-                
+
                 parsedDates = Array.from(new Set(parsedDates));
                 setAttendanceDates(parsedDates);
 
@@ -280,7 +280,7 @@ export default function DashboardPage() {
         try {
             const detail = await api.getSentenceAttemptDetail(note.id);
             let attemptsArray: Word[][] = [];
-            
+
             const attemptsList = detail?.details || detail?.attempts || [];
             if (Array.isArray(attemptsList) && attemptsList.length > 0) {
                 attemptsArray = attemptsList.map((att: any) => {
@@ -328,7 +328,7 @@ export default function DashboardPage() {
             if (!isNaN(Number(d)) && Number(d) > 0 && Number(d) <= 31) {
                 return Number(d); // e.g. [8, 9] from backend
             }
-            
+
             const str = String(d);
             const match = str.match(/(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})/);
             if (match) {
@@ -375,7 +375,7 @@ export default function DashboardPage() {
     const calendarDays = getCalendarDays(selectedYear, selectedMonth);
 
     return (
-        <div className="h-screen bg-[#FFFBEB] flex flex-col items-center py-5 px-8 relative font-sans overflow-hidden">
+        <div className="min-h-screen xl:h-screen bg-[#FFFBEB] flex flex-col items-center py-4 px-4 sm:px-6 xl:py-5 xl:px-8 relative font-sans xl:overflow-hidden overflow-x-hidden">
 
             {/* 뚜렷하고 귀여운 베이지/갈색 구름 배경 */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
@@ -386,7 +386,7 @@ export default function DashboardPage() {
             </div>
 
             {/* --- 상단 헤더 --- */}
-            <header className="w-full max-w-[1500px] bg-white rounded-full py-3 px-6 flex justify-between items-center shadow-sm z-10 mb-5 shrink-0 border border-gray-100">
+            <header className="w-full max-w-[1500px] bg-white rounded-full py-3 px-4 xl:px-6 flex justify-between items-center shadow-sm z-10 mb-4 xl:mb-5 shrink-0 border border-gray-100">
                 {/* 레이아웃 공간 유지를 위한 부모 (기존 크기 유지로 배치 무너짐 방지) */}
                 <div className="relative w-32 h-10 shrink-0">
                     {/* 독단적으로 로고 크기만 키우기 위해 absolute 적용 */}
@@ -409,12 +409,12 @@ export default function DashboardPage() {
             </header>
 
             {/* --- 메인 보드 --- */}
-            <main className="w-full max-w-[1500px] bg-white rounded-[36px] p-6 lg:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.04)] flex flex-col lg:flex-row gap-8 z-10 flex-1 min-h-0 relative border border-gray-100">
+            <main className="w-full max-w-[1500px] bg-white rounded-[24px] xl:rounded-[36px] p-5 lg:p-6 xl:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.04)] flex flex-col lg:flex-row lg:flex-wrap xl:flex-nowrap gap-6 xl:gap-8 z-10 flex-1 xl:min-h-0 relative border border-gray-100 mb-6 xl:mb-0">
 
                 {/* ========================================= */}
                 {/* 1. 왼쪽 영역 (학습 달력) */}
                 {/* ========================================= */}
-                <section className="w-full lg:flex-[1.0] flex flex-col h-full min-h-0 relative z-10 bg-white">
+                <section className="w-full lg:w-[calc(50%-12px)] xl:w-auto xl:flex-[1.0] flex flex-col xl:h-full xl:min-h-0 relative z-10 bg-white">
 
                     <div className="flex justify-between items-end mb-6 shrink-0 px-2 mt-2">
                         <div className="flex items-center gap-2">
@@ -467,7 +467,7 @@ export default function DashboardPage() {
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-7 grid-rows-5 gap-3 flex-1 min-h-0">
+                    <div className="grid grid-cols-7 grid-rows-5 gap-2 xl:gap-3 flex-1 xl:min-h-0">
                         {calendarDays.map((date, i) => {
                             const isAttended = date && attendanceDays.includes(date);
                             return (
@@ -494,8 +494,8 @@ export default function DashboardPage() {
                 {/* ========================================= */}
                 {/* 2. 중앙 영역 (오답노트 & 챗봇 로그) */}
                 {/* ========================================= */}
-                <section className="w-full lg:flex-[1] flex flex-col gap-6 h-full min-h-0 px-2 lg:px-0 z-10">
-                    <div className="flex flex-col flex-1 min-h-0">
+                <section className="w-full lg:w-[calc(50%-12px)] xl:w-auto xl:flex-[1] flex flex-col gap-6 xl:h-full xl:min-h-0 px-1 xl:px-0 z-10">
+                    <div className="flex flex-col flex-1 xl:min-h-0">
                         <div className="shrink-0 mb-2">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[#FBBF24] text-[22px]">📝</span>
@@ -504,7 +504,7 @@ export default function DashboardPage() {
                             <p className="text-[11px] text-gray-400 mb-4 ml-8 font-medium">내가 틀렸던 문제를 보여줘요!</p>
                             <div className="text-[12px] font-bold text-gray-400 mb-3 ml-2 border-b border-gray-50 pb-2">문장 분해 문제</div>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2.5">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2.5 min-h-[200px] max-h-[300px] xl:max-h-none xl:min-h-0">
                             {incorrectNotes.length === 0 ? (
                                 <div className="text-[12px] text-gray-400 text-center py-8 font-bold">오답노트가 없습니다.</div>
                             ) : (
@@ -524,12 +524,12 @@ export default function DashboardPage() {
 
                     <div className="border-b border-gray-100 w-full shrink-0"></div>
 
-                    <div className="flex flex-col flex-[0.8] min-h-0">
+                    <div className="flex flex-col flex-[0.8] xl:min-h-0">
                         <div className="shrink-0 flex items-center gap-2 mb-4">
                             <span className="text-[#FBBF24] text-[22px]">💬</span>
                             <h2 className="text-[17px] font-extrabold text-gray-800">챗봇 로그내역</h2>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 pb-1">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 pb-1 min-h-[200px] max-h-[300px] xl:max-h-none xl:min-h-0">
                             {chatSessions.length === 0 ? (
                                 <div className="text-[12px] text-gray-400 text-center py-8 font-bold">진행 중인 채팅이 없습니다.</div>
                             ) : (
@@ -561,7 +561,7 @@ export default function DashboardPage() {
                 {/* ========================================= */}
                 {/* 3. 오른쪽 영역 (나의 등급 & 캐릭터) */}
                 {/* ========================================= */}
-                <section className="w-full lg:flex-[1.4] flex flex-col gap-6 h-full min-h-0 relative z-10">
+                <section className="w-full lg:w-full xl:w-auto xl:flex-[1.4] flex flex-col gap-6 xl:h-full xl:min-h-0 relative z-10">
 
                     {/* 노란색 고리 장식 */}
                     <div className="absolute -top-4 left-6 w-3.5 h-10 bg-[#FDE047] rounded-full z-20 shadow-sm"></div>
@@ -630,7 +630,7 @@ export default function DashboardPage() {
                                             src = strVal ? String(strVal) : "지급";
                                         }
 
-                                        label = `+${amount} XP (${src}) [DEBUG: ${JSON.stringify(xpObj)}]`;
+                                        label = `+${amount} XP (${src})`;
                                     }
                                     return <span key={idx} className="text-gray-800">{label}</span>;
                                 })
@@ -638,9 +638,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex-1 flex flex-col min-h-0 relative z-10">
-                        <h2 className="text-[16px] font-extrabold text-gray-800 mb-6 shrink-0">나의 캐릭터</h2>
-                        <div className="flex justify-between flex-1 min-h-0 gap-3 xl:gap-4">
+                    <div className="bg-white border border-gray-100 rounded-[28px] p-5 xl:p-6 shadow-sm flex-1 flex flex-col xl:min-h-0 relative z-10">
+                        <h2 className="text-[16px] font-extrabold text-gray-800 mb-4 xl:mb-6 shrink-0">나의 캐릭터</h2>
+                        <div className="flex justify-between flex-1 xl:min-h-0 gap-3 xl:gap-4 min-h-[250px] lg:min-h-[350px] xl:min-h-0">
 
                             {/* 레벨 1~10 스크롤 리스트 */}
                             <div className="flex flex-col gap-2 flex-[0.7] overflow-y-auto custom-scrollbar pr-1 pb-2">
@@ -709,20 +709,20 @@ export default function DashboardPage() {
             {/* 모달 1: 오답노트 */}
             {selectedNote && (
                 <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[40px] p-8 max-w-4xl w-full shadow-2xl relative flex flex-col items-center h-[75vh]">
-                        <button onClick={() => setSelectedNote(null)} className="absolute top-6 right-8 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 text-xl hover:bg-gray-100 transition-colors">✕</button>
-                        <div className="bg-[#F2FEE5] border-2 border-[#CEFA93] rounded-full py-5 px-12 text-center mb-10 w-[85%] shrink-0 shadow-sm mt-4">
-                            <span className="text-xl font-extrabold text-gray-800">{selectedNote.correctAnswer}</span>
+                    <div className="bg-white rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 max-w-4xl w-full shadow-2xl relative flex flex-col items-center h-[85vh] lg:h-[75vh]">
+                        <button onClick={() => setSelectedNote(null)} className="absolute top-4 right-4 lg:top-6 lg:right-8 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 text-xl hover:bg-gray-100 transition-colors">✕</button>
+                        <div className="bg-[#F2FEE5] border-2 border-[#CEFA93] rounded-full py-4 lg:py-5 px-6 lg:px-12 text-center mb-6 lg:mb-10 w-full lg:w-[85%] shrink-0 shadow-sm mt-8 lg:mt-4">
+                            <span className="text-lg lg:text-xl font-extrabold text-gray-800">{selectedNote.correctAnswer}</span>
                         </div>
-                        <div className="w-[90%] flex flex-col flex-1 min-h-0">
+                        <div className="w-full lg:w-[90%] flex flex-col flex-1 min-h-0">
                             <div className="text-gray-400 text-sm font-extrabold mb-5 shrink-0 px-2">시도 내역</div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-8 pb-4">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 lg:pr-4 space-y-8 pb-4">
                                 {selectedNote.attempts.map((attempt, index) => (
                                     <div key={index} className="flex flex-col">
-                                        <div className="text-[#3B82F6] font-extrabold text-[15px] mb-3 px-2">{index + 1}번 시도</div>
-                                        <div className="flex gap-3 flex-wrap px-2">
+                                        <div className="text-[#3B82F6] font-extrabold text-[14px] lg:text-[15px] mb-3 px-2">{index + 1}번 시도</div>
+                                        <div className="flex gap-2 lg:gap-3 flex-wrap px-2">
                                             {attempt.map((word, wIdx) => (
-                                                <div key={wIdx} className={`px-6 py-2.5 rounded-full font-bold text-[16px] border-2 shadow-sm ${getWordColorClass(word.type)}`}>
+                                                <div key={wIdx} className={`px-4 lg:px-6 py-2 lg:py-2.5 rounded-full font-bold text-[14px] lg:text-[16px] border-2 shadow-sm ${getWordColorClass(word.type)}`}>
                                                     {word.text}
                                                 </div>
                                             ))}
@@ -739,20 +739,20 @@ export default function DashboardPage() {
             {/* 모달 2: 챗봇 대화내역 */}
             {selectedChat && (
                 <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-[40px] max-w-4xl w-full shadow-2xl relative flex flex-col h-[75vh] overflow-hidden">
-                        <div className="absolute top-6 right-6 z-20">
+                    <div className="bg-white rounded-[32px] lg:rounded-[40px] max-w-4xl w-full shadow-2xl relative flex flex-col h-[85vh] lg:h-[75vh] overflow-hidden">
+                        <div className="absolute top-4 right-4 lg:top-6 lg:right-6 z-20">
                             <button onClick={() => setSelectedChat(null)} className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-400 text-xl shadow-sm hover:bg-gray-50 transition-colors">✕</button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-12 bg-[#F8F9FA] m-0 flex flex-col gap-8 custom-scrollbar pt-16">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-12 bg-[#F8F9FA] m-0 flex flex-col gap-6 lg:gap-8 custom-scrollbar pt-16 lg:pt-16">
                             {selectedChat.messages.map((msg) => (
                                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     {msg.sender === 'bot' && (
-                                        <div className="flex gap-4 items-end">
+                                        <div className="flex gap-2 lg:gap-4 items-end">
                                             <div className="flex flex-col items-center gap-2 shrink-0">
-                                                <div className="w-14 h-14 bg-[#CEFA93] rounded-full flex items-center justify-center text-3xl border-4 border-white shadow-sm">🦖</div>
+                                                <div className="w-10 h-10 lg:w-14 lg:h-14 bg-[#CEFA93] rounded-full flex items-center justify-center text-xl lg:text-3xl border-2 lg:border-4 border-white shadow-sm">🦖</div>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-white border-2 border-[#CEFA93] text-gray-800 text-[15px] font-medium px-6 py-4 rounded-[24px] rounded-bl-md whitespace-pre-wrap max-w-lg leading-relaxed shadow-sm">
+                                            <div className="flex items-center gap-2 lg:gap-3">
+                                                <div className="bg-white border-2 border-[#CEFA93] text-gray-800 text-[14px] lg:text-[15px] font-medium px-4 lg:px-6 py-3 lg:py-4 rounded-[20px] lg:rounded-[24px] rounded-bl-md whitespace-pre-wrap max-w-[220px] sm:max-w-xs lg:max-w-lg leading-relaxed shadow-sm">
                                                     {msg.text}
                                                 </div>
                                                 {msg.audioUrl && (
@@ -762,7 +762,7 @@ export default function DashboardPage() {
                                         </div>
                                     )}
                                     {msg.sender === 'user' && (
-                                        <div className="bg-[#D4F1A1] text-[#4D7C0F] text-[15px] font-bold px-6 py-4 rounded-[24px] rounded-br-md max-w-lg shadow-sm">
+                                        <div className="bg-[#D4F1A1] text-[#4D7C0F] text-[14px] lg:text-[15px] font-bold px-4 lg:px-6 py-3 lg:py-4 rounded-[20px] lg:rounded-[24px] rounded-br-md max-w-[220px] sm:max-w-xs lg:max-w-lg shadow-sm">
                                             {msg.text}
                                         </div>
                                     )}
