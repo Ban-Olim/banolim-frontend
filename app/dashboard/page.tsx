@@ -80,6 +80,7 @@ export default function DashboardPage() {
     const [isCheckedInToday, setIsCheckedInToday] = useState(false);
     const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+    const [todayDayIndex, setTodayDayIndex] = useState(() => new Date().getDay());
     const [selectedNote, setSelectedNote] = useState<IncorrectNote | null>(null);
     const [selectedChat, setSelectedChat] = useState<ChatLog | null>(null);
     const [userLevelData, setUserLevelData] = useState<any>(null);
@@ -456,7 +457,7 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-7 gap-3 text-center mb-3 shrink-0">
                         {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
                             <div key={day} className="flex justify-center items-center font-bold text-sm">
-                                {idx === 1 ? (
+                                {idx === todayDayIndex ? (
                                     <div className="bg-[#FDE047] w-8 h-8 rounded-full flex items-center justify-center text-yellow-900 shadow-sm">
                                         {day}
                                     </div>
