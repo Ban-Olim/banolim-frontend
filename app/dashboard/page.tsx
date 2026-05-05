@@ -87,8 +87,10 @@ export default function DashboardPage() {
     useEffect(() => {
         api.getUserLevel()
             .then(data => {
+                console.log("Raw user level data:", data);
                 if (data) {
-                    setUserLevelData(data.data || data.content || data);
+                    const unwrapped = data.data || data.content || data;
+                    setUserLevelData(unwrapped);
                 }
             })
             .catch(error => {
@@ -97,18 +99,52 @@ export default function DashboardPage() {
 
         api.getSentenceAttempts()
             .then(data => {
-                if (data && Array.isArray(data)) {
-                    const normalized = data.map((item: any) => ({
-                        id: item.problemId || item.id,
-                        question: item.sentenceText || item.question,
-                        correctAnswer: item.correctAnswer || item.sentenceText || "정답 정보 없음",
-                        attempts: item.attempts || []
-                    }));
-                    setIncorrectNotes(normalized);
+                const res: any = data;
+                console.log("[오답노트] 1. raw data:", JSON.stringify(res));
+                // request()가 isSuccess+data 래퍼를 벗겨서 SentenceAttemptListRes { attempts: [...] } 를 반환함
+                let attemptsArray: any[] = [];
+                if (res) {
+                    if (Array.isArray(res)) {
+                        attemptsArray = res;
+                    } else if (res.attempts && Array.isArray(res.attempts)) {
+                        attemptsArray = res.attempts; // 올바른 경로: SentenceAttemptListRes.attempts
+                    } else if (res.data && Array.isArray(res.data)) {
+                        attemptsArray = res.data;
+                    } else if (res.content && Array.isArray(res.content)) {
+                        attemptsArray = res.content;
+                    } else {
+                        const arrayVal = Object.values(res).find(val => Array.isArray(val));
+                        if (arrayVal) attemptsArray = arrayVal as any[];
+                        else console.warn("[오답노트] 배열을 찾을 수 없음. keys:", Object.keys(res));
+                    }
                 }
+                console.log("[오답노트] attemptsArray:", attemptsArray.length, "items", attemptsArray[0]);
+
+                // AttemptList 스펙: { sentenceAttemptId, sentenceText, attemptCount, submittedAt }
+                // problemId 기준으로 중복 제거 후 오답노트 목록 구성 (상세는 클릭 시 로드)
+                const seen = new Set<number>();
+                const normalized = attemptsArray
+                    .map((item: any, idx: number) => {
+                        // sentenceAttemptId는 시도 ID, problemId는 문제 ID (상세 조회 시 사용)
+                        const id = item.sentenceProblemId ?? item.problemId ?? item.sentenceAttemptId ?? item.id ?? idx;
+                        return {
+                            id,
+                            question: item.sentenceText || item.question || item.text || "문제 내용 없음",
+                            correctAnswer: item.sentenceText || item.correctAnswer || item.answer || "정답 정보 없음",
+                            attempts: []
+                        };
+                    })
+                    .filter((note: any) => {
+                        // 같은 문제 중복 제거
+                        if (seen.has(note.id)) return false;
+                        seen.add(note.id);
+                        return true;
+                    });
+                console.log("[오답노트] normalized:", normalized.length, "items");
+                setIncorrectNotes(normalized);
             })
             .catch(error => {
-                console.error("Failed to fetch sentence attempts:", error);
+                console.error("[오답노트] FETCH ERROR:", error);
             });
 
         api.getChatSessions()
@@ -139,17 +175,43 @@ export default function DashboardPage() {
             .then(data => {
                 let parsedDates: string[] = [];
                 if (data && Array.isArray(data)) {
-                    parsedDates = data.map(d => typeof d === 'string' ? d : (d.date || d.stampDate || d.createdAt));
+                    parsedDates = data.map(d => {
+                        if (typeof d === 'string' || typeof d === 'number') return String(d);
+                        if (typeof d === 'object' && d !== null) {
+                            if (d.date) return String(d.date);
+                            if (d.stampDate) return String(d.stampDate);
+                            if (d.createdAt) return String(d.createdAt);
+                            if (d.attendanceDate) return String(d.attendanceDate);
+                            if (d.day !== undefined) return String(d.day);
+                            // fallback: find any string that looks like a date or a valid day number
+                            for (const val of Object.values(d)) {
+                                if (typeof val === 'string' && /^\\d{4}-\\d{2}-\\d{2}/.test(val)) return val;
+                                if (typeof val === 'number' && val >= 1 && val <= 31) return String(val);
+                            }
+                        }
+                        return null;
+                    }).filter(Boolean) as string[];
                 }
+                
+                parsedDates = Array.from(new Set(parsedDates));
                 setAttendanceDates(parsedDates);
 
                 const today = new Date();
                 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                const currentY = new Date().getFullYear();
-                const currentM = new Date().getMonth() + 1;
+                const currentY = today.getFullYear();
+                const currentM = today.getMonth() + 1;
 
                 if (selectedYear === currentY && selectedMonth === currentM) {
-                    const isTodayChecked = parsedDates.some(d => d && d.startsWith(todayStr));
+                    const isTodayChecked = parsedDates.some(d => {
+                        if (!d) return false;
+                        if (d.startsWith(todayStr)) return true;
+                        if (!isNaN(Number(d)) && Number(d) === today.getDate()) return true;
+                        const dt = new Date(d);
+                        if (!isNaN(dt.getTime()) && dt.getFullYear() === currentY && (dt.getMonth() + 1) === currentM && dt.getDate() === today.getDate()) {
+                            return true;
+                        }
+                        return false;
+                    });
 
                     if (isTodayChecked) {
                         setIsCheckedInToday(true);
@@ -157,7 +219,7 @@ export default function DashboardPage() {
                         api.checkAttendance()
                             .then(() => {
                                 setIsCheckedInToday(true);
-                                setAttendanceDates(prev => [...prev, todayStr]);
+                                setAttendanceDates(prev => Array.from(new Set([...prev, todayStr])));
                             })
                             .catch(err => console.error("자동 출석 실패:", err));
                     }
@@ -218,8 +280,10 @@ export default function DashboardPage() {
         try {
             const detail = await api.getSentenceAttemptDetail(note.id);
             let attemptsArray: Word[][] = [];
-            if (detail && detail.attempts && Array.isArray(detail.attempts)) {
-                attemptsArray = detail.attempts.map((att: any) => {
+            
+            const attemptsList = detail?.details || detail?.attempts || [];
+            if (Array.isArray(attemptsList) && attemptsList.length > 0) {
+                attemptsArray = attemptsList.map((att: any) => {
                     const answersMap = att.userAnswers || {};
                     return Object.keys(answersMap).sort((a, b) => parseInt(a) - parseInt(b)).map(key => {
                         const types: WordType[] = ['time', 'subject', 'action', 'place'];
@@ -244,13 +308,14 @@ export default function DashboardPage() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const userData = userLevelData || {};
-    const myLevel = userData.level ?? userData.currentLevel ?? 7;
+    const myLevel = userData.level ?? userData.currentLevel ?? userData.lvl ?? 7;
     const myLevelName = userData.levelName || LEVELS.find(l => l.lv === myLevel)?.name || "실전 대화러";
-    const myProgressRate = userData.progressRate || 0;
-    const myConsecutiveDays = userData.consecutiveDays ?? userData.consecutiveAttendanceDays ?? 0;
-    const myNextLevelRemainingXp = userData.nextLevelRemainingXp || 0;
-    const myTotalXp = userData.totalXp ?? userData.totalExp ?? 0;
-    const myTodayXpList = userData.todayXpList || [];
+    const myProgressRate = userData.progressRate ?? userData.progress ?? userData.percent ?? userData.xpPercent ?? 0;
+    const myConsecutiveDays = userData.consecutiveDays ?? userData.consecutiveAttendanceDays ?? userData.streak ?? userData.attendanceStreak ?? 0;
+    const myNextLevelRemainingXp = userData.nextLevelRemainingXp ?? userData.remainingXp ?? userData.requiredXp ?? userData.nextExp ?? 0;
+    const myTotalXp = userData.totalXp ?? userData.totalExp ?? userData.xp ?? userData.exp ?? userData.experience ?? 0;
+    let myTodayXpList = userData.todayXpList ?? userData.todayExpList ?? userData.todayXp ?? userData.recentXp ?? userData.histories ?? userData.todayHistories ?? [];
+    if (!Array.isArray(myTodayXpList)) myTodayXpList = [];
 
     const [clickedLevel, setClickedLevel] = useState<number | null>(null);
     const currentLevel = myLevel;
@@ -263,7 +328,19 @@ export default function DashboardPage() {
             if (!isNaN(Number(d)) && Number(d) > 0 && Number(d) <= 31) {
                 return Number(d); // e.g. [8, 9] from backend
             }
-            const dt = new Date(d);
+            
+            const str = String(d);
+            const match = str.match(/(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})/);
+            if (match) {
+                const y = parseInt(match[1]);
+                const m = parseInt(match[2]);
+                const day = parseInt(match[3]);
+                if (y === selectedYear && m === selectedMonth) {
+                    return day;
+                }
+            }
+
+            const dt = new Date(str);
             if (!isNaN(dt.getTime()) && dt.getFullYear() === selectedYear && (dt.getMonth() + 1) === selectedMonth) {
                 return dt.getDate();
             }
@@ -532,9 +609,28 @@ export default function DashboardPage() {
                                     let label = "";
                                     if (typeof xpObj === 'string') label = xpObj;
                                     else if (xpObj) {
-                                        const amount = xpObj.amount ?? xpObj.xp ?? 0;
-                                        const src = xpObj.reason || xpObj.source || xpObj.title || "지급";
-                                        label = `+${amount} XP (${src})`;
+                                        // 명시적인 키 먼저 확인 (point, value, reward 추가)
+                                        let rawAmount = xpObj.amount ?? xpObj.xp ?? xpObj.exp ?? xpObj.points ?? xpObj.point ?? xpObj.score ?? xpObj.gained ?? xpObj.value ?? xpObj.reward;
+                                        let amount = 0;
+                                        let src = xpObj.reason || xpObj.source || xpObj.title || xpObj.description || xpObj.type || xpObj.name;
+
+                                        if (rawAmount !== undefined && rawAmount !== null) {
+                                            amount = Number(rawAmount);
+                                        } else {
+                                            // 못 찾았을 경우, id나 date가 아닌 숫자 값 찾기
+                                            const possibleNum = Object.entries(xpObj).find(([k, v]) => {
+                                                if (k.toLowerCase().includes('id') || k.toLowerCase().includes('date') || k.toLowerCase().includes('time')) return false;
+                                                return typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)) && v.trim() !== '');
+                                            });
+                                            if (possibleNum) amount = Number(possibleNum[1]);
+                                        }
+
+                                        if (!src) {
+                                            const strVal = Object.values(xpObj).find(v => typeof v === 'string' && isNaN(Number(v)) && !String(v).includes('-'));
+                                            src = strVal ? String(strVal) : "지급";
+                                        }
+
+                                        label = `+${amount} XP (${src}) [DEBUG: ${JSON.stringify(xpObj)}]`;
                                     }
                                     return <span key={idx} className="text-gray-800">{label}</span>;
                                 })

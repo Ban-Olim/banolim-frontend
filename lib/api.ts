@@ -2,8 +2,28 @@ import { useAuthStore } from "./store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+function getToken(): string | null {
+  // Zustand 스토어에서 먼저 시도
+  const storeToken = useAuthStore.getState().accessToken;
+  if (storeToken) return storeToken;
+
+  // Zustand hydration이 아직 안 됐을 경우 localStorage에서 직접 읽기
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("auth-storage");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed?.state?.accessToken ?? null;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
 function authHeader(): HeadersInit {
-  const token = useAuthStore.getState().accessToken;
+  const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -25,8 +45,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const text = await res.text();
   if (!text) return undefined as T;
-  const json = JSON.parse(text) as ApiResponse<T>;
-  return json.data;
+  const json = JSON.parse(text);
+  if (json && typeof json === 'object' && 'isSuccess' in json && 'data' in json) {
+    return json.data !== null && json.data !== undefined ? json.data : json;
+  }
+  if (json && typeof json === 'object' && 'data' in json && !('isSuccess' in json)) {
+    return json.data;
+  }
+  return json as T;
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -70,9 +96,10 @@ export interface SentenceProblem {
   };
 }
 
-export interface SlotResult {
+export interface SubmitResult {
   isCorrect: boolean;
-  correctAnswer: string;
+  xpGranted: boolean;
+  results?: Record<string, { isCorrect: boolean; correctAnswer: string }>;
 }
 
 export interface SubmitResult {
@@ -218,10 +245,7 @@ export const api = {
   },
 
   /** 문장 분해 답변 제출 */
-  submitSentence(data: {
-    sentenceProblemId: number;
-    userAnswers: Record<string, string>;
-  }) {
+  submitSentence(data: { sentenceProblemId: number; userAnswers: Record<string, string> }) {
     return request<SubmitResult>("/api/sentences/submit", {
       method: "POST",
       body: JSON.stringify(data),

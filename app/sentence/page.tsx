@@ -40,32 +40,25 @@ export default function SentencePage() {
   const [problemIndex, setProblemIndex] = useState(0);
   const [allDone, setAllDone] = useState(false);
 
-  const {
-    data: problems,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["sentencePractice"],
-    queryFn: () => api.getSentencePractice(),
+  const { data: rawProblem, isLoading, isError } = useQuery({
+    queryKey: ["sentencePractice", DIFFICULTY],
+    queryFn: () => api.getSentencePractice(DIFFICULTY),
   });
 
-  const problem = problems?.[problemIndex];
+  const problem = (Array.isArray(rawProblem) ? rawProblem[0] : rawProblem) as any;
 
-  // 문제 변경 시 슬롯/단어 초기화
+  // 문제 로드 시 슬롯/단어 초기화
   useEffect(() => {
-    if (!problem) return;
-    // 빈 correctAnswer 슬롯(슬롯라벨도 빈 것) 제외
-    const activeSlots = problem.sentenceData.slots.filter(
-      (s) => s.slotLabel !== "" || s.correctAnswer !== "",
-    );
-    const words: WordChip[] = problem.sentenceData.options.map((text, i) => ({
+    if (!problem || !problem.sentenceData) return;
+    const words: WordChip[] = problem.sentenceData.options.map((text: string, i: number) => ({
       id: `w${i}`,
       text,
       colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
     }));
     setAvailableWords(words);
-    setSlots(activeSlots.map((slot) => ({ ...slot, currentWord: null })));
-    setActiveModal("none");
+    setSlots(
+      problem.sentenceData.slots.map((slot: any) => ({ ...slot, currentWord: null })),
+    );
   }, [problem]);
 
   const handleDragStart = (word: WordChip) => setDraggedWord(word);
@@ -106,13 +99,16 @@ export default function SentencePage() {
       slots.forEach((s) => {
         userAnswers[String(s.slotOrder)] = s.currentWord!.text;
       });
+      console.log("[제출] sentenceProblemId:", problem.sentenceProblemId, "userAnswers:", userAnswers);
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
         userAnswers,
       });
+      console.log("[제출] 성공 result:", JSON.stringify(result));
       setActiveModal(result.isCorrect ? "correct" : "incorrect");
-    } catch {
+    } catch (err) {
       // 제출 실패 시 클라이언트 검증으로 폴백
+      console.error("[제출] submitSentence 실패 → 클라이언트 폴백:", err);
       const allCorrect = slots.every(
         (s) => s.currentWord?.text === s.correctAnswer,
       );
@@ -245,10 +241,9 @@ export default function SentencePage() {
                 onDrop={() => handleDrop(slot.slotOrder)}
                 onClick={() => handleSlotClick(slot.slotOrder)}
                 className={`flex-1 min-w-[100px] max-w-[200px] h-16 rounded-2xl flex items-center justify-center text-sm font-semibold transition-all border-2 cursor-pointer select-none
-                  ${
-                    slot.currentWord
-                      ? `${slot.currentWord.colorClass} shadow-sm`
-                      : "bg-white border-gray-300 text-gray-500 shadow-inner"
+                  ${slot.currentWord
+                    ? `${slot.currentWord.colorClass} shadow-sm`
+                    : "bg-white border-gray-300 text-gray-500 shadow-inner"
                   }`}
               >
                 {slot.currentWord ? slot.currentWord.text : slot.slotLabel}
