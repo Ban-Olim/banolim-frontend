@@ -174,9 +174,29 @@ export default function DashboardPage() {
     useEffect(() => {
         api.getAttendanceStamps(selectedYear, selectedMonth)
             .then(data => {
+                const res: any = data;
+                let stampsArray: any[] = [];
+                if (res) {
+                    if (Array.isArray(res)) {
+                        stampsArray = res;
+                    } else if (res.stamps && Array.isArray(res.stamps)) {
+                        stampsArray = res.stamps;
+                    } else if (res.data && Array.isArray(res.data)) {
+                        stampsArray = res.data;
+                    } else if (res.content && Array.isArray(res.content)) {
+                        stampsArray = res.content;
+                    } else if (res.attendanceList && Array.isArray(res.attendanceList)) {
+                        stampsArray = res.attendanceList;
+                    } else if (typeof res === 'object') {
+                        const arrayVal = Object.values(res).find(val => Array.isArray(val));
+                        if (arrayVal) stampsArray = arrayVal as any[];
+                        else console.warn("[출석도장] 배열을 찾을 수 없음. keys:", Object.keys(res));
+                    }
+                }
+
                 let parsedDates: string[] = [];
-                if (data && Array.isArray(data)) {
-                    parsedDates = data.map(d => {
+                if (stampsArray.length > 0) {
+                    parsedDates = stampsArray.map(d => {
                         if (typeof d === 'string' || typeof d === 'number') return String(d);
                         if (typeof d === 'object' && d !== null) {
                             if (d.date) return String(d.date);
@@ -186,7 +206,7 @@ export default function DashboardPage() {
                             if (d.day !== undefined) return String(d.day);
                             // fallback: find any string that looks like a date or a valid day number
                             for (const val of Object.values(d)) {
-                                if (typeof val === 'string' && /^\\d{4}-\\d{2}-\\d{2}/.test(val)) return val;
+                                if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) return val;
                                 if (typeof val === 'number' && val >= 1 && val <= 31) return String(val);
                             }
                         }
