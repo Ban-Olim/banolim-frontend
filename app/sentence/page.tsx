@@ -97,7 +97,7 @@ export default function SentencePage() {
     try {
       const userAnswers: Record<string, string> = {};
       slots.forEach((s) => {
-        userAnswers[String(s.slotOrder)] = s.currentWord!.text;
+        userAnswers[String(s.slotOrder)] = s.currentWord?.text ?? "";
       });
       console.log("[제출] sentenceProblemId:", problem.sentenceProblemId, "userAnswers:", userAnswers);
       const result = await api.submitSentence({
