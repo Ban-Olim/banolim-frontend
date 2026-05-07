@@ -13,7 +13,13 @@ interface FeedbackModalProps {
   hintSlots?: SlotHint[];
 }
 
-export default function FeedbackModal({ isOpen, type, onClose, onNext, hintSlots }: FeedbackModalProps) {
+export default function FeedbackModal({
+  isOpen,
+  type,
+  onClose,
+  onNext,
+  hintSlots,
+}: FeedbackModalProps) {
   if (!isOpen || type === "none") return null;
 
   const config = {
@@ -53,11 +59,15 @@ export default function FeedbackModal({ isOpen, type, onClose, onNext, hintSlots
       <div className="bg-white rounded-[32px] w-full max-w-[420px] p-10 flex flex-col items-center shadow-2xl">
         {/* Face */}
         <div className="relative mb-6">
-          <div className={`w-[120px] h-[120px] ${current.faceBg} rounded-full flex items-center justify-center text-6xl`}>
+          <div
+            className={`w-[120px] h-[120px] ${current.faceBg} rounded-full flex items-center justify-center text-6xl`}
+          >
             {current.faceEmoji}
           </div>
           {current.statusIcon && (
-            <div className={`absolute -right-1 -bottom-1 w-9 h-9 ${current.statusIcon.bg} rounded-full flex items-center justify-center text-white font-bold text-lg`}>
+            <div
+              className={`absolute -right-1 -bottom-1 w-9 h-9 ${current.statusIcon.bg} rounded-full flex items-center justify-center text-white font-bold text-lg`}
+            >
               {current.statusIcon.icon}
             </div>
           )}
@@ -66,15 +76,23 @@ export default function FeedbackModal({ isOpen, type, onClose, onNext, hintSlots
         <h3 className="text-t-24b text-gray-800 mb-3">{current.title}</h3>
 
         {type === "hint" && hintSlots ? (
-          <div className="text-b-16r text-gray-600 text-center leading-loose mb-8">
+          <div className="w-full flex flex-col gap-3 mb-8">
             {hintSlots.map((s, i) => (
-              <div key={i}>
-                <strong>{s.slotLabel}</strong>에 해당하는 단어를 찾아보세요
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-[#FFFDF0] border border-[#FCEC90] rounded-2xl px-4 py-3"
+              >
+                <span className="shrink-0 bg-[#FCEC90] text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">
+                  {s.slotLabel}
+                </span>
+                <span className="text-b-16r text-gray-700">{s.hint}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-b-16r text-gray-600 text-center leading-relaxed mb-8">{current.desc}</p>
+          <p className="text-b-16r text-gray-600 text-center leading-relaxed mb-8">
+            {current.desc}
+          </p>
         )}
 
         <button

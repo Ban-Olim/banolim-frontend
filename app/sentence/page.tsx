@@ -104,7 +104,7 @@ export default function SentencePage() {
     try {
       const userAnswers: Record<string, string> = {};
       slots.forEach((s) => {
-        userAnswers[String(s.slotOrder)] = s.currentWord!.text;
+        userAnswers[String(s.slotOrder)] = s.currentWord?.text ?? "";
       });
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
