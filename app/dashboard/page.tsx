@@ -95,7 +95,14 @@ export default function DashboardPage() {
     useEffect(() => {
         api.getProfile()
             .then(data => {
-                if (data) setMyProfile(data);
+                const res: any = data;
+                if (res) {
+                    const nickname = res.nickname ?? res.name ?? res.data?.nickname ?? res.data?.name ?? res.user?.nickname ?? res.userInfo?.nickname;
+                    const age = res.age ?? res.userAge ?? res.data?.age ?? res.data?.userAge ?? res.user?.age ?? res.userInfo?.age;
+                    if (nickname || age) {
+                        setMyProfile({ nickname: nickname || "", age: age || 0 });
+                    }
+                }
             })
             .catch(error => console.error("Failed to fetch profile on mount:", error));
     }, []);
@@ -103,16 +110,20 @@ export default function DashboardPage() {
     const openSettings = async () => {
         setIsSettingsOpen(true);
         setSettingsError("");
-        if (myProfile) {
+        if (myProfile && (myProfile.nickname || myProfile.age)) {
             setSettingsNickname(myProfile.nickname || "");
             setSettingsAge(myProfile.age ? String(myProfile.age) : "");
         } else {
             try {
-                const profile = await api.getProfile();
+                const profile: any = await api.getProfile();
                 if (profile) {
-                    setMyProfile(profile);
-                    setSettingsNickname(profile.nickname || "");
-                    setSettingsAge(profile.age ? String(profile.age) : "");
+                    const nickname = profile.nickname ?? profile.name ?? profile.data?.nickname ?? profile.data?.name ?? profile.user?.nickname ?? profile.userInfo?.nickname;
+                    const age = profile.age ?? profile.userAge ?? profile.data?.age ?? profile.data?.userAge ?? profile.user?.age ?? profile.userInfo?.age;
+                    if (nickname || age) {
+                        setMyProfile({ nickname: nickname || "", age: age || 0 });
+                    }
+                    setSettingsNickname(nickname || "");
+                    setSettingsAge(age ? String(age) : "");
                 }
             } catch (error) {
                 console.error("Failed to fetch profile:", error);
