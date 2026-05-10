@@ -158,17 +158,52 @@ export const api = {
 
   /** 닉네임 및 나이 설정 */
   updateProfile(data: { nickname: string; age: number }) {
-    return request<void>("/api/users/me/info", {
+    return request<void>("/api/users/me/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
   },
 
   /** 프로필 조회 */
-  getProfile() {
-    return request<{ nickname: string; age: number }>("/api/users/me/info", {
-      method: "GET",
-    });
+  async getProfile() {
+    try {
+      const res: any = await request<{ nickname: string; age: number }>("/api/users/me/profile", {
+        method: "GET",
+      });
+      // 래퍼가 벗겨져서 data 속성 안에 있는지 확인
+      const nickname = res?.nickname ?? res?.name ?? res?.data?.nickname ?? res?.data?.name;
+      const age = res?.age ?? res?.userAge ?? res?.data?.age ?? res?.data?.userAge;
+      
+      if (nickname || age) {
+        return { nickname, age };
+      }
+    } catch (e) {
+      console.warn("Failed to fetch GET /api/users/me/profile", e);
+    }
+
+    // Fallback: 카카오 로그인 초기 정보가 JWT에 있다면 JWT에서 읽어옴
+    const token = getToken();
+    if (token && typeof window !== "undefined") {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          window.atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+        console.log("[Profile Fallback] JWT Payload:", payload);
+        return {
+          nickname: payload.nickname ?? payload.name ?? "",
+          age: payload.age ?? payload.userAge ?? 0
+        };
+      } catch (e) {
+        console.warn("Failed to parse JWT", e);
+      }
+    }
+    return { nickname: "", age: 0 };
   },
 
   /** 캐릭터 목록 조회 */

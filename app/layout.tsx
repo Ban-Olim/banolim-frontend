@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Providers } from "../lib/providers";
+import GlobalBGM from "../components/GlobalBGM";
 import "./globals.css";
 
 const pretendard = localFont({
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="ko" className={`${pretendard.variable} ${cafe24.variable}`}>
       <body className="font-sans antialiased text-gray-900">
         <Providers>{children}</Providers>
+        <GlobalBGM />
       </body>
     </html>
   );

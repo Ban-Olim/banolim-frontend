@@ -148,6 +148,7 @@ export default function DashboardPage() {
             setMyProfile({ nickname: settingsNickname, age: ageNumber });
             setIsSettingsOpen(false);
             localStorage.setItem("bgmVolume", String(bgmVolume));
+            window.dispatchEvent(new CustomEvent('bgmVolumeChange', { detail: bgmVolume }));
         } catch (error) {
             console.error("Failed to save profile:", error);
             setSettingsError("저장에 실패했습니다. 다시 시도해주세요.");
