@@ -84,6 +84,71 @@ export default function DashboardPage() {
     const [selectedNote, setSelectedNote] = useState<IncorrectNote | null>(null);
     const [selectedChat, setSelectedChat] = useState<ChatLog | null>(null);
     const [userLevelData, setUserLevelData] = useState<any>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settingsNickname, setSettingsNickname] = useState("");
+    const [settingsAge, setSettingsAge] = useState("");
+    const [bgmVolume, setBgmVolume] = useState(50);
+    const [isSettingsSaving, setIsSettingsSaving] = useState(false);
+    const [settingsError, setSettingsError] = useState("");
+    const [myProfile, setMyProfile] = useState<{nickname: string; age: number} | null>(null);
+
+    useEffect(() => {
+        api.getProfile()
+            .then(data => {
+                if (data) setMyProfile(data);
+            })
+            .catch(error => console.error("Failed to fetch profile on mount:", error));
+    }, []);
+
+    const openSettings = async () => {
+        setIsSettingsOpen(true);
+        setSettingsError("");
+        if (myProfile) {
+            setSettingsNickname(myProfile.nickname || "");
+            setSettingsAge(myProfile.age ? String(myProfile.age) : "");
+        } else {
+            try {
+                const profile = await api.getProfile();
+                if (profile) {
+                    setMyProfile(profile);
+                    setSettingsNickname(profile.nickname || "");
+                    setSettingsAge(profile.age ? String(profile.age) : "");
+                }
+            } catch (error) {
+                console.error("Failed to fetch profile:", error);
+            }
+        }
+    };
+
+    const saveSettings = async () => {
+        const isNicknameValid = /^[a-z가-힣]{1,8}$/.test(settingsNickname);
+        const ageNumber = parseInt(settingsAge);
+        const isAgeValid = !isNaN(ageNumber) && ageNumber >= 1 && ageNumber <= 100;
+        
+        if (!isNicknameValid || !isAgeValid) {
+            setSettingsError("닉네임(소문자/한글 1~8자)과 나이(1~100)를 확인해주세요.");
+            return;
+        }
+
+        setIsSettingsSaving(true);
+        setSettingsError("");
+        try {
+            await api.updateProfile({ nickname: settingsNickname, age: ageNumber });
+            setMyProfile({ nickname: settingsNickname, age: ageNumber });
+            setIsSettingsOpen(false);
+            localStorage.setItem("bgmVolume", String(bgmVolume));
+        } catch (error) {
+            console.error("Failed to save profile:", error);
+            setSettingsError("저장에 실패했습니다. 다시 시도해주세요.");
+        } finally {
+            setIsSettingsSaving(false);
+        }
+    };
+
+    useEffect(() => {
+        const vol = localStorage.getItem("bgmVolume");
+        if (vol) setBgmVolume(Number(vol));
+    }, []);
 
     useEffect(() => {
         api.getUserLevel()
@@ -396,7 +461,7 @@ export default function DashboardPage() {
     const calendarDays = getCalendarDays(selectedYear, selectedMonth);
 
     return (
-        <div className="min-h-screen xl:h-screen bg-[#FFFBEB] flex flex-col items-center py-4 px-4 sm:px-6 xl:py-5 xl:px-8 relative font-sans xl:overflow-hidden overflow-x-hidden">
+        <div className="min-h-screen xl:h-screen bg-[#FFFBEB] flex flex-col items-center py-4 px-4 sm:px-6 xl:py-5 xl:px-8 relative font-display xl:overflow-hidden overflow-x-hidden">
 
             {/* 뚜렷하고 귀여운 베이지/갈색 구름 배경 */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
@@ -421,12 +486,17 @@ export default function DashboardPage() {
                         />
                     </div>
                 </div>
-                <div className="font-extrabold text-xl text-gray-700 tracking-wide">
+                <h1 className="font-display text-xl font-bold text-gray-700 tracking-wide">
                     대시보드
+                </h1>
+                <div className="flex items-center gap-2">
+                    <button onClick={openSettings} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors text-sm">
+                        ⚙️
+                    </button>
+                    <button onClick={() => window.location.href = '/main'} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
+                        ✕
+                    </button>
                 </div>
-                <button onClick={() => window.location.href = '/main'} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
-                    ✕
-                </button>
             </header>
 
             {/* --- 메인 보드 --- */}
@@ -589,7 +659,14 @@ export default function DashboardPage() {
                     <div className="absolute -top-4 right-6 w-3.5 h-10 bg-[#FDE047] rounded-full z-20 shadow-sm"></div>
 
                     <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col shrink-0 relative z-10 pt-8">
-                        <h2 className="text-[16px] font-extrabold text-gray-800 mb-5">나의 등급</h2>
+                        <div className="flex justify-between items-center mb-5">
+                            <h2 className="text-[16px] font-extrabold text-gray-800">나의 등급</h2>
+                            {myProfile && (
+                                <span className="text-[12px] font-bold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
+                                    {myProfile.nickname} <span className="text-gray-400 font-medium ml-0.5">({myProfile.age}세)</span>
+                                </span>
+                            )}
+                        </div>
                         <div className="flex gap-2 mb-6">
                             <span className="bg-[#FFE4E6] text-[#EF4444] text-[10px] font-bold px-3 py-1.5 rounded-full border border-[#FECDD3]">연속 {myConsecutiveDays}일 🔥</span>
                             {isCheckedInToday ? (
@@ -790,6 +867,81 @@ export default function DashboardPage() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 모달 3: 설정 모달 */}
+            {isSettingsOpen && (
+                <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 backdrop-blur-sm font-sans">
+                    <div className="bg-white rounded-[32px] w-full max-w-sm p-8 shadow-2xl relative flex flex-col">
+                        <button onClick={() => setIsSettingsOpen(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors">✕</button>
+                        <h2 className="text-xl font-display font-extrabold text-gray-800 mb-6 text-center">설정</h2>
+
+                        {myProfile ? (
+                            <div className="bg-[#F2FEE5] border border-[#CEFA93] rounded-[16px] p-4 mb-6 text-center shadow-sm">
+                                <p className="text-[12px] text-gray-500 font-bold mb-1">현재 나의 프로필</p>
+                                <p className="text-[16px] font-extrabold text-gray-800">
+                                    {myProfile.nickname} <span className="text-[14px] text-gray-600 font-bold">({myProfile.age}세)</span>
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="bg-[#F8F9FA] border border-gray-200 rounded-[16px] p-4 mb-6 text-center shadow-sm">
+                                <p className="text-[13px] text-gray-500 font-bold">프로필 정보를 불러올 수 없습니다.</p>
+                                <p className="text-[11px] text-gray-400 mt-1">로그인(토큰) 상태를 확인해주세요.</p>
+                            </div>
+                        )}
+                        
+                        <div className="flex flex-col gap-4 mb-6">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-bold text-gray-600 px-1">닉네임</label>
+                                <input 
+                                    type="text" 
+                                    value={settingsNickname} 
+                                    onChange={(e) => setSettingsNickname(e.target.value)}
+                                    placeholder="영어 소문자 또는 한글 1~8자"
+                                    className="w-full bg-[#F8F9FA] border border-gray-200 rounded-[12px] px-4 py-3 text-[14px] font-bold text-gray-800 focus:outline-none focus:border-[#C6FA98] transition-colors"
+                                />
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-bold text-gray-600 px-1">나이</label>
+                                <input 
+                                    type="number" 
+                                    value={settingsAge} 
+                                    onChange={(e) => setSettingsAge(e.target.value)}
+                                    placeholder="1세 이상 100세 이하"
+                                    className="w-full bg-[#F8F9FA] border border-gray-200 rounded-[12px] px-4 py-3 text-[14px] font-bold text-gray-800 focus:outline-none focus:border-[#C6FA98] transition-colors"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[13px] font-bold text-gray-600">배경음악 소리</label>
+                                    <span className="text-[12px] font-bold text-[#65A30D]">{bgmVolume}%</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="100" 
+                                    value={bgmVolume} 
+                                    onChange={(e) => setBgmVolume(Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#C6FA98]"
+                                />
+                            </div>
+                        </div>
+
+                        {settingsError && (
+                            <p className="text-[#EF4444] text-[12px] font-bold text-center mb-4">{settingsError}</p>
+                        )}
+
+                        <button 
+                            onClick={saveSettings} 
+                            disabled={isSettingsSaving}
+                            className="w-full bg-[#C6FA98] hover:bg-[#b8f08a] text-green-900 font-extrabold py-3.5 rounded-[16px] transition-colors disabled:opacity-50"
+                        >
+                            {isSettingsSaving ? "저장 중..." : "저장하기"}
+                        </button>
                     </div>
                 </div>
             )}
