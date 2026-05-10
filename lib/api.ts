@@ -166,19 +166,30 @@ export const api = {
 
   /** 프로필 조회 */
   async getProfile() {
+    let res: any;
+    
+    // 1. GET /api/users/me/info 시도 (원래 엔드포인트)
     try {
-      const res: any = await request<{ nickname: string; age: number }>("/api/users/me/profile", {
-        method: "GET",
-      });
-      // 래퍼가 벗겨져서 data 속성 안에 있는지 확인
-      const nickname = res?.nickname ?? res?.name ?? res?.data?.nickname ?? res?.data?.name;
-      const age = res?.age ?? res?.userAge ?? res?.data?.age ?? res?.data?.userAge;
-      
-      if (nickname || age) {
-        return { nickname, age };
-      }
+      res = await request<{ nickname: string; age: number }>("/api/users/me/info", { method: "GET" });
     } catch (e) {
-      console.warn("Failed to fetch GET /api/users/me/profile", e);
+      console.warn("Failed GET /api/users/me/info", e);
+    }
+
+    // 2. GET /api/users/me/profile 시도 (Swagger에 PATCH가 있어서 혹시 몰라 추가된 엔드포인트)
+    if (!res || (!res.nickname && !res.name && !res.data?.nickname && !res.data?.name)) {
+      try {
+        res = await request<{ nickname: string; age: number }>("/api/users/me/profile", { method: "GET" });
+      } catch (e) {
+        console.warn("Failed GET /api/users/me/profile", e);
+      }
+    }
+
+    // 결과 확인
+    let nickname = res?.nickname ?? res?.name ?? res?.data?.nickname ?? res?.data?.name;
+    let age = res?.age ?? res?.userAge ?? res?.data?.age ?? res?.data?.userAge;
+    
+    if (nickname || age) {
+      return { nickname: nickname || "", age: age || 0 };
     }
 
     // Fallback: 카카오 로그인 초기 정보가 JWT에 있다면 JWT에서 읽어옴
@@ -186,7 +197,11 @@ export const api = {
     if (token && typeof window !== "undefined") {
       try {
         const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = base64.length % 4;
+        if(pad) {
+          base64 += new Array(5 - pad).join('=');
+        }
         const jsonPayload = decodeURIComponent(
           window.atob(base64)
             .split('')
@@ -195,10 +210,9 @@ export const api = {
         );
         const payload = JSON.parse(jsonPayload);
         console.log("[Profile Fallback] JWT Payload:", payload);
-        return {
-          nickname: payload.nickname ?? payload.name ?? "",
-          age: payload.age ?? payload.userAge ?? 0
-        };
+        nickname = payload.nickname ?? payload.name ?? "";
+        age = payload.age ?? payload.userAge ?? 0;
+        return { nickname, age };
       } catch (e) {
         console.warn("Failed to parse JWT", e);
       }

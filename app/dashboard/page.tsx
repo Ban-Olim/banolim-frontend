@@ -936,8 +936,13 @@ export default function DashboardPage() {
                                     type="range" 
                                     min="0" 
                                     max="100" 
-                                    value={bgmVolume} 
-                                    onChange={(e) => setBgmVolume(Number(e.target.value))}
+                                    value={bgmVolume}
+                                    onChange={(e) => {
+                                        const newVol = Number(e.target.value);
+                                        setBgmVolume(newVol);
+                                        localStorage.setItem("bgmVolume", String(newVol));
+                                        window.dispatchEvent(new CustomEvent('bgmVolumeChange', { detail: newVol }));
+                                    }}
                                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#C6FA98]"
                                 />
                             </div>
