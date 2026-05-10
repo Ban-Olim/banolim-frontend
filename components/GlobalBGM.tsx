@@ -81,6 +81,33 @@ export default function GlobalBGM() {
     };
   }, [isPlaying, volume]);
 
+  // 모든 버튼 클릭 시 효과음 재생
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // button, a 태그, role="button", cursor-pointer 클래스를 가진 요소 클릭 시 효과음 재생
+      if (
+        target.closest("button") || 
+        target.closest("a") || 
+        target.closest('[role="button"]') || 
+        target.closest('.cursor-pointer')
+      ) {
+        if (volume > 0) {
+          const clickAudio = new Audio("/click.mp3");
+          clickAudio.volume = volume / 100;
+          clickAudio.play().catch((err) => console.warn("Click sound play error:", err));
+        }
+      }
+    };
+
+    // 캡처링 단계에서 이벤트 리스너를 등록하여 하위 요소의 e.stopPropagation() 에 영향받지 않게 함
+    window.addEventListener("click", handleGlobalClick, true);
+
+    return () => {
+      window.removeEventListener("click", handleGlobalClick, true);
+    };
+  }, [volume]);
+
   // bgm 파일은 /banolim_bgm.mp3 에 존재한다고 가정
   return (
     <audio
