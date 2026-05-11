@@ -60,7 +60,7 @@ function PageHeader({
 }) {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
-      <div className="w-32 h-12 relative">
+      <div className="w-36 h-14 relative">
         <Image
           src="/logo.jpg"
           alt="로고"
@@ -250,7 +250,23 @@ export default function NunchikochePage() {
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
         <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 relative">
+            <AnimatePresence>
+              {scoreDiff !== null && (
+                <motion.div
+                  key={String(moodPercent)}
+                  initial={{ opacity: 0, y: -8, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -16, scale: 0.85 }}
+                  transition={{ duration: 0.9, ease: "easeOut" }}
+                  className="sticky top-0 z-20 flex justify-center pointer-events-none"
+                >
+                  <span className="bg-[#18181b] text-white text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg">
+                    +{scoreDiff}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <AnimatePresence initial={false}>
               {messages.map((msg) => (
                 <motion.div
@@ -274,26 +290,12 @@ export default function NunchikochePage() {
                       <span className="text-xs text-gray-500">
                         {chatChar.name}
                       </span>
-                      <div className="relative w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-green-400 rounded-full transition-all duration-500"
                           style={{ width: `${moodPercent}%` }}
                         />
                       </div>
-                      <AnimatePresence>
-                        {scoreDiff !== null && (
-                          <motion.span
-                            key={String(moodPercent)}
-                            initial={{ opacity: 1, y: 0 }}
-                            animate={{ opacity: 0, y: -20 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 1.1, ease: "easeOut" }}
-                            className="absolute -top-5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-green-500 whitespace-nowrap pointer-events-none"
-                          >
-                            +{scoreDiff}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
                     </div>
                   )}
                   {msg.sender === "character" ? (

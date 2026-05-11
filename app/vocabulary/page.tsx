@@ -37,14 +37,25 @@ function posColor(pos: string) {
 }
 
 // 선택 노드 + 직접 연결된 노드만 원형 배치 (ego graph)
+const MAX_NODES = 8; // 중심 제외 최대 표시 수
+
 function computePositions(words: GraphWord[], links: GraphLink[], selectedId: string) {
+  // 연결된 노드 우선
   const connectedIds = new Set<string>();
   links.forEach((l) => {
     if (l.source === selectedId) connectedIds.add(l.target);
     if (l.target === selectedId) connectedIds.add(l.source);
   });
-  const visible = words.filter((w) => w.senseId === selectedId || connectedIds.has(w.senseId));
-  const others = visible.filter((w) => w.senseId !== selectedId);
+
+  const connected = words.filter((w) => w.senseId !== selectedId && connectedIds.has(w.senseId));
+  const unconnected = words.filter((w) => w.senseId !== selectedId && !connectedIds.has(w.senseId));
+
+  // 연결된 것 먼저, 빈 자리는 나머지로 채움
+  const others = [
+    ...connected,
+    ...unconnected.slice(0, Math.max(0, MAX_NODES - connected.length)),
+  ];
+
   const n = others.length;
   const r = Math.min(CX, CY) * (n <= 3 ? 0.5 : n <= 6 ? 0.62 : 0.72);
 
@@ -54,7 +65,7 @@ function computePositions(words: GraphWord[], links: GraphLink[], selectedId: st
     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
     pos[w.senseId] = { x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) };
   });
-  return pos;
+  return { pos, connectedIds };
 }
 
 function EmptyState() {
@@ -91,8 +102,10 @@ export default function VocabularyPage() {
     return words.reduce((a, b) => ((cnt[b.senseId] ?? 0) > (cnt[a.senseId] ?? 0) ? b : a)).senseId;
   }, [words, links, selectedId]);
 
-  const positions = useMemo(
-    () => (effectiveSelected ? computePositions(words, links, effectiveSelected) : {}),
+  const { pos: positions, connectedIds } = useMemo(
+    () => effectiveSelected
+      ? computePositions(words, links, effectiveSelected)
+      : { pos: {} as Record<string, { x: number; y: number }>, connectedIds: new Set<string>() },
     [words, links, effectiveSelected],
   );
 
@@ -125,7 +138,7 @@ export default function VocabularyPage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm">
-        <div className="w-24 h-9 relative">
+        <div className="w-36 h-14 relative">
           <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
         </div>
         <div className="flex items-center gap-3">
@@ -168,6 +181,19 @@ export default function VocabularyPage() {
 
                 {/* SVG 엣지 */}
                 <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${W} ${H}`}>
+                  {/* 점선: 포지션은 있지만 실제 관계 없는 filler 노드 */}
+                  {effectiveSelected && Object.keys(positions)
+                    .filter((id) => id !== effectiveSelected && !connectedIds.has(id))
+                    .map((id) => {
+                      const sp = positions[effectiveSelected];
+                      const tp = positions[id];
+                      if (!sp || !tp) return null;
+                      return (
+                        <line key={id} x1={sp.x} y1={sp.y} x2={tp.x} y2={tp.y}
+                          stroke="#E5E7EB" strokeWidth="1.5" strokeDasharray="5 4" />
+                      );
+                    })}
+                  {/* 실선: 실제 관계 링크 */}
                   {links.map((link, i) => {
                     const sp = positions[link.source];
                     const tp = positions[link.target];
@@ -178,10 +204,7 @@ export default function VocabularyPage() {
                     return (
                       <g key={i}>
                         <line x1={sp.x} y1={sp.y} x2={tp.x} y2={tp.y} stroke={color} strokeWidth="2" />
-                        <rect
-                          x={mx - 18} y={my - 10} width={36} height={14}
-                          rx={6} fill="white" fillOpacity={0.85}
-                        />
+                        <rect x={mx - 18} y={my - 10} width={36} height={14} rx={6} fill="white" fillOpacity={0.85} />
                         <text x={mx} y={my} textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="#6b7280">
                           {LINK_LABEL[link.type] ?? link.type}
                         </text>

@@ -204,7 +204,7 @@ export default function SentencePage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md m-4 rounded-3xl shadow-sm z-10">
-        <div className="w-[100px] h-[40px] relative">
+        <div className="w-36 h-14 relative">
           <Image
             src="/logo.jpg"
             alt="로고"
