@@ -242,7 +242,7 @@ export default function NunchikochePage() {
   if (view === "chat" && chatChar) {
     return (
       <main
-        className="min-h-screen flex flex-col relative overflow-hidden"
+        className="h-screen flex flex-col relative overflow-hidden"
         style={{
           backgroundImage: "url('/nunchikochi_bg.png')",
           backgroundSize: "cover",
@@ -250,27 +250,28 @@ export default function NunchikochePage() {
         }}
       >
         <BackgroundDecorations />
+
+        {/* 점수 표시: 뷰포트 고정 → 스크롤해도 항상 상단에 */}
+        <AnimatePresence>
+          {scoreDiff !== null && (
+            <motion.div
+              key={String(moodPercent)}
+              initial={{ opacity: 0, y: -8, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.85 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="fixed top-5 left-0 right-0 z-50 flex justify-center pointer-events-none"
+            >
+              <span className="bg-[#18181b] text-white text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg">
+                +{scoreDiff}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
-        <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10 relative">
-          {/* 점수 표시: 스크롤 영역 밖 absolute → 레이아웃 이동 없음 */}
-          <AnimatePresence>
-            {scoreDiff !== null && (
-              <motion.div
-                key={String(moodPercent)}
-                initial={{ opacity: 0, y: -8, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.85 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="absolute top-4 left-0 right-0 z-20 flex justify-center pointer-events-none"
-              >
-                <span className="bg-[#18181b] text-white text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg">
-                  +{scoreDiff}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+        <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10 min-h-0">
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
             <AnimatePresence initial={false}>
               {messages.map((msg) => (
