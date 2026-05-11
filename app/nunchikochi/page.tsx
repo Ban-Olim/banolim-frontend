@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
 import { api, CharacterListItem, CharacterDetail } from "../../lib/api";
 
@@ -87,7 +89,6 @@ export default function NunchikochePage() {
   const [characterDetails, setCharacterDetails] = useState<
     Record<number, CharacterDetail>
   >({});
-  const [scoreToast, setScoreToast] = useState<number | null>(null);
   const prevMoodRef = useRef<number>(30);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -108,9 +109,7 @@ export default function NunchikochePage() {
   useEffect(() => {
     const diff = moodPercent - prevMoodRef.current;
     if (diff > 0) {
-      setScoreToast(diff);
-      const t = setTimeout(() => setScoreToast(null), 1500);
-      return () => clearTimeout(t);
+      toast.success(`+${diff} 마음 온도 상승! 🌡️`, { duration: 1500 });
     }
     prevMoodRef.current = moodPercent;
   }, [moodPercent]);
@@ -235,17 +234,14 @@ export default function NunchikochePage() {
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
         <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 relative">
-            {scoreToast !== null && (
-              <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
-                <div className="bg-green-400 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md animate-bounce">
-                  +{scoreToast} 🌡️
-                </div>
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+            <AnimatePresence initial={false}>
             {messages.map((msg) => (
-              <div
+              <motion.div
                 key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 className={`flex ${msg.sender === "user" ? "justify-end" : "items-start gap-3"}`}
               >
                 {msg.sender === "character" && (
@@ -302,8 +298,9 @@ export default function NunchikochePage() {
                     {msg.text}
                   </div>
                 )}
-              </div>
+              </motion.div>
             ))}
+            </AnimatePresence>
             <div ref={messagesEndRef} />
           </div>
 
