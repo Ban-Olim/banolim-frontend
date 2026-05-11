@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
@@ -59,7 +59,7 @@ function PageHeader({
 }) {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
-      <div className="w-24 h-9 relative">
+      <div className="w-32 h-12 relative">
         <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
       </div>
       <h1 className="font-display text-xl font-bold text-gray-700">{title}</h1>
@@ -87,6 +87,9 @@ export default function NunchikochePage() {
   const [characterDetails, setCharacterDetails] = useState<
     Record<number, CharacterDetail>
   >({});
+  const [scoreToast, setScoreToast] = useState<number | null>(null);
+  const prevMoodRef = useRef<number>(30);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 캐릭터 목록 조회
   const { data: rawCharacters = [], isLoading: isLoadingChars } = useQuery({
@@ -95,6 +98,22 @@ export default function NunchikochePage() {
   });
 
   const characters = rawCharacters.map(withDefaults);
+
+  // 메시지 추가 시 자동 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // 점수 변화 토스트
+  useEffect(() => {
+    const diff = moodPercent - prevMoodRef.current;
+    if (diff > 0) {
+      setScoreToast(diff);
+      const t = setTimeout(() => setScoreToast(null), 1500);
+      return () => clearTimeout(t);
+    }
+    prevMoodRef.current = moodPercent;
+  }, [moodPercent]);
 
   // 카드 열릴 때 캐릭터 상세 조회
   useEffect(() => {
@@ -216,7 +235,14 @@ export default function NunchikochePage() {
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
         <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 relative">
+            {scoreToast !== null && (
+              <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
+                <div className="bg-green-400 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md animate-bounce">
+                  +{scoreToast} 🌡️
+                </div>
+              </div>
+            )}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -256,7 +282,12 @@ export default function NunchikochePage() {
                     {msg.isTyping ? (
                       <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />
                     ) : (
-                      <button className="flex-shrink-0">
+                      <button
+                        className="flex-shrink-0"
+                        onClick={() => {
+                          if (msg.audioUrl) new Audio(msg.audioUrl).play();
+                        }}
+                      >
                         <Image
                           src="/images/sound.png"
                           alt="소리"
@@ -273,6 +304,7 @@ export default function NunchikochePage() {
                 )}
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
