@@ -193,8 +193,8 @@ export default function SentencePage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md m-4 rounded-3xl shadow-sm z-10">
-        <div className="w-[100px] h-[40px] bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-s-16sb">
-          로고
+        <div className="w-[100px] h-[40px] relative">
+          <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
         </div>
         <h1 className="font-display text-xl font-bold text-gray-700">
           문장 분해 연습
