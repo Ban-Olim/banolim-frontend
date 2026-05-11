@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
 import { api, CharacterListItem, CharacterDetail } from "../../lib/api";
 
@@ -95,6 +94,7 @@ export default function NunchikochePage() {
   const [characterDetails, setCharacterDetails] = useState<
     Record<number, CharacterDetail>
   >({});
+  const [scoreDiff, setScoreDiff] = useState<number | null>(null);
   const prevMoodRef = useRef<number>(30);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -111,11 +111,13 @@ export default function NunchikochePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 점수 변화 토스트
+  // 점수 변화 감지
   useEffect(() => {
     const diff = moodPercent - prevMoodRef.current;
     if (diff > 0) {
-      toast.success(`+${diff} 마음 온도 상승! 🌡️`, { duration: 1500 });
+      setScoreDiff(diff);
+      const t = setTimeout(() => setScoreDiff(null), 1200);
+      return () => clearTimeout(t);
     }
     prevMoodRef.current = moodPercent;
   }, [moodPercent]);
@@ -272,12 +274,26 @@ export default function NunchikochePage() {
                       <span className="text-xs text-gray-500">
                         {chatChar.name}
                       </span>
-                      <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="relative w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-green-400 rounded-full transition-all duration-500"
                           style={{ width: `${moodPercent}%` }}
                         />
                       </div>
+                      <AnimatePresence>
+                        {scoreDiff !== null && (
+                          <motion.span
+                            key={String(moodPercent)}
+                            initial={{ opacity: 1, y: 0 }}
+                            animate={{ opacity: 0, y: -20 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1.1, ease: "easeOut" }}
+                            className="absolute -top-5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-green-500 whitespace-nowrap pointer-events-none"
+                          >
+                            +{scoreDiff}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
                   {msg.sender === "character" ? (

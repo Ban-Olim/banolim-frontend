@@ -36,11 +36,17 @@ function posColor(pos: string) {
   return POS_COLOR[pos] ?? { bg: "bg-gray-100", border: "border-gray-300", text: "text-gray-600" };
 }
 
-// 모든 노드를 원형으로 배치 (선택 노드는 중심)
-function computePositions(words: GraphWord[], selectedId: string) {
-  const others = words.filter((w) => w.senseId !== selectedId);
+// 선택 노드 + 직접 연결된 노드만 원형 배치 (ego graph)
+function computePositions(words: GraphWord[], links: GraphLink[], selectedId: string) {
+  const connectedIds = new Set<string>();
+  links.forEach((l) => {
+    if (l.source === selectedId) connectedIds.add(l.target);
+    if (l.target === selectedId) connectedIds.add(l.source);
+  });
+  const visible = words.filter((w) => w.senseId === selectedId || connectedIds.has(w.senseId));
+  const others = visible.filter((w) => w.senseId !== selectedId);
   const n = others.length;
-  const r = Math.min(CX, CY) * (n <= 4 ? 0.6 : n <= 8 ? 0.72 : 0.82);
+  const r = Math.min(CX, CY) * (n <= 3 ? 0.5 : n <= 6 ? 0.62 : 0.72);
 
   const pos: Record<string, { x: number; y: number }> = {};
   pos[selectedId] = { x: CX, y: CY };
@@ -86,8 +92,8 @@ export default function VocabularyPage() {
   }, [words, links, selectedId]);
 
   const positions = useMemo(
-    () => (effectiveSelected ? computePositions(words, effectiveSelected) : {}),
-    [words, effectiveSelected],
+    () => (effectiveSelected ? computePositions(words, links, effectiveSelected) : {}),
+    [words, links, effectiveSelected],
   );
 
   const selectedWord = words.find((w) => w.senseId === effectiveSelected);
