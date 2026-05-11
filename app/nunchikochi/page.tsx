@@ -111,15 +111,15 @@ export default function NunchikochePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 점수 변화 감지
+  // 점수 변화 감지 (메시지 응답 후에만)
   useEffect(() => {
     const diff = moodPercent - prevMoodRef.current;
+    prevMoodRef.current = moodPercent;
     if (diff > 0) {
       setScoreDiff(diff);
-      const t = setTimeout(() => setScoreDiff(null), 1200);
+      const t = setTimeout(() => setScoreDiff(null), 1500);
       return () => clearTimeout(t);
     }
-    prevMoodRef.current = moodPercent;
   }, [moodPercent]);
 
   // 카드 열릴 때 캐릭터 상세 조회
@@ -211,7 +211,9 @@ export default function NunchikochePage() {
         temperature,
       );
       setSessionId(sid);
-      setMoodPercent(temperature ?? 30);
+      const initTemp = temperature ?? 30;
+      prevMoodRef.current = initTemp;
+      setMoodPercent(initTemp);
       setMessages(
         (initMessages ?? []).map((m) => ({
           id: `chat-${m.chatId}`,
