@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, GraphWord } from "../../lib/api";
@@ -76,6 +77,7 @@ function EmptyState() {
 
 // ── 메인 ─────────────────────────────────────────────────────────────────────
 export default function VocabularyPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [centerIdx, setCenterIdx] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -131,8 +133,8 @@ export default function VocabularyPage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm">
-        <div className="w-24 h-9 bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-sm font-semibold">
-          로고
+        <div className="w-24 h-9 relative">
+          <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
         </div>
         <div className="flex items-center gap-3">
           <h1 className="font-display text-lg font-bold text-gray-700">
@@ -144,7 +146,7 @@ export default function VocabularyPage() {
             </span>
           )}
         </div>
-        <button className="flex-shrink-0">
+        <button className="flex-shrink-0" onClick={() => router.push("/main")}>
           <Image src="/images/close.png" alt="닫기" width={32} height={32} />
         </button>
       </header>

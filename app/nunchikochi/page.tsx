@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
@@ -58,8 +59,8 @@ function PageHeader({
 }) {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
-      <div className="w-24 h-9 bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-sm font-semibold">
-        로고
+      <div className="w-24 h-9 relative">
+        <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
       </div>
       <h1 className="font-display text-xl font-bold text-gray-700">{title}</h1>
       <button onClick={onClose} className="flex-shrink-0">
@@ -70,6 +71,7 @@ function PageHeader({
 }
 
 export default function NunchikochePage() {
+  const router = useRouter();
   const [view, setView] = useState<"selection" | "chat">("selection");
   const [openCardId, setOpenCardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -348,7 +350,7 @@ export default function NunchikochePage() {
       }}
     >
       <BackgroundDecorations />
-      <PageHeader title="눈치코치" />
+      <PageHeader title="눈치코치" onClose={() => router.push("/main")} />
 
       <div className="flex gap-3 mx-3 mb-3 z-10 flex-1 min-h-0">
         {/* 왼쪽 – 성격 목록 */}
