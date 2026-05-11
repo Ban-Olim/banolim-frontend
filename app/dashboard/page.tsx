@@ -90,7 +90,7 @@ export default function DashboardPage() {
     const [bgmVolume, setBgmVolume] = useState(50);
     const [isSettingsSaving, setIsSettingsSaving] = useState(false);
     const [settingsError, setSettingsError] = useState("");
-    const [myProfile, setMyProfile] = useState<{nickname: string; age: number} | null>(null);
+    const [myProfile, setMyProfile] = useState<{ nickname: string; age: number } | null>(null);
 
     useEffect(() => {
         api.getProfile()
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         const isNicknameValid = /^[a-z가-힣]{1,8}$/.test(settingsNickname);
         const ageNumber = parseInt(settingsAge);
         const isAgeValid = !isNaN(ageNumber) && ageNumber >= 1 && ageNumber <= 100;
-        
+
         if (!isNicknameValid || !isAgeValid) {
             setSettingsError("닉네임(소문자/한글 1~8자)과 나이(1~100)를 확인해주세요.");
             return;
@@ -748,9 +748,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-[28px] p-5 xl:p-6 shadow-sm flex-1 flex flex-col xl:min-h-0 relative z-10">
+                    <div className="bg-white border border-gray-100 rounded-[28px] p-5 xl:p-6 shadow-sm flex-1 flex flex-col xl:min-h-[200px] relative z-10">
                         <h2 className="text-[16px] font-extrabold text-gray-800 mb-4 xl:mb-6 shrink-0">나의 캐릭터</h2>
-                        <div className="flex justify-between flex-1 xl:min-h-0 gap-3 xl:gap-4 min-h-[250px] lg:min-h-[350px] xl:min-h-0">
+                        <div className="flex justify-between flex-1 gap-3 xl:gap-4 min-h-[250px] lg:min-h-[350px] xl:min-h-[100px]">
 
                             {/* 레벨 1~10 스크롤 리스트 */}
                             <div className="flex flex-col gap-2 flex-[0.7] overflow-y-auto custom-scrollbar pr-1 pb-2">
@@ -796,7 +796,7 @@ export default function DashboardPage() {
                             </div>
 
                             {/* 레벨별 캐릭터 이미지 중심축 표시 박스 */}
-                            <div className="flex-[1.3] h-full min-h-[160px] bg-white rounded-[24px] flex items-center justify-center shrink-0 border-[3px] border-gray-50 shadow-sm relative overflow-hidden transition-all duration-300">
+                            <div className="flex-[1.3] h-full min-h-[160px] xl:min-h-[100px] bg-white rounded-[24px] flex items-center justify-center shrink-0 border-[3px] border-gray-50 shadow-sm relative overflow-hidden transition-all duration-300">
                                 <Image
                                     key={displayLevel}
                                     src={`/character/LV ${displayLevel}.png`}
@@ -903,24 +903,24 @@ export default function DashboardPage() {
                                 <p className="text-[11px] text-gray-400 mt-1">로그인(토큰) 상태를 확인해주세요.</p>
                             </div>
                         )}
-                        
+
                         <div className="flex flex-col gap-4 mb-6">
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-gray-600 px-1">닉네임</label>
-                                <input 
-                                    type="text" 
-                                    value={settingsNickname} 
+                                <input
+                                    type="text"
+                                    value={settingsNickname}
                                     onChange={(e) => setSettingsNickname(e.target.value)}
                                     placeholder="영어 소문자 또는 한글 1~8자"
                                     className="w-full bg-[#F8F9FA] border border-gray-200 rounded-[12px] px-4 py-3 text-[14px] font-bold text-gray-800 focus:outline-none focus:border-[#C6FA98] transition-colors"
                                 />
                             </div>
-                            
+
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-bold text-gray-600 px-1">나이</label>
-                                <input 
-                                    type="number" 
-                                    value={settingsAge} 
+                                <input
+                                    type="number"
+                                    value={settingsAge}
                                     onChange={(e) => setSettingsAge(e.target.value)}
                                     placeholder="1세 이상 100세 이하"
                                     className="w-full bg-[#F8F9FA] border border-gray-200 rounded-[12px] px-4 py-3 text-[14px] font-bold text-gray-800 focus:outline-none focus:border-[#C6FA98] transition-colors"
@@ -932,10 +932,10 @@ export default function DashboardPage() {
                                     <label className="text-[13px] font-bold text-gray-600">배경음악 소리</label>
                                     <span className="text-[12px] font-bold text-[#65A30D]">{bgmVolume}%</span>
                                 </div>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="100" 
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
                                     value={bgmVolume}
                                     onChange={(e) => {
                                         const newVol = Number(e.target.value);
@@ -952,8 +952,8 @@ export default function DashboardPage() {
                             <p className="text-[#EF4444] text-[12px] font-bold text-center mb-4">{settingsError}</p>
                         )}
 
-                        <button 
-                            onClick={saveSettings} 
+                        <button
+                            onClick={saveSettings}
                             disabled={isSettingsSaving}
                             className="w-full bg-[#C6FA98] hover:bg-[#b8f08a] text-green-900 font-extrabold py-3.5 rounded-[16px] transition-colors disabled:opacity-50"
                         >
