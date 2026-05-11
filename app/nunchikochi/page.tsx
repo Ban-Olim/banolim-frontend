@@ -62,7 +62,13 @@ function PageHeader({
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
       <div className="w-32 h-12 relative">
-        <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
+        <Image
+          src="/logo.jpg"
+          alt="로고"
+          fill
+          className="object-contain"
+          style={{ mixBlendMode: "multiply" }}
+        />
       </div>
       <h1 className="font-display text-xl font-bold text-gray-700">{title}</h1>
       <button onClick={onClose} className="flex-shrink-0">
@@ -194,13 +200,21 @@ export default function NunchikochePage() {
       const res = await api.createSession(char.characterId);
       console.log("[createSession] raw response", res);
       const { sessionId: sid, messages: initMessages, temperature } = res;
-      console.log("[createSession] sid:", sid, "msgs:", initMessages, "temp:", temperature);
+      console.log(
+        "[createSession] sid:",
+        sid,
+        "msgs:",
+        initMessages,
+        "temp:",
+        temperature,
+      );
       setSessionId(sid);
       setMoodPercent(temperature ?? 30);
       setMessages(
         (initMessages ?? []).map((m) => ({
           id: `chat-${m.chatId}`,
-          sender: m.speaker === "BOT" ? ("character" as const) : ("user" as const),
+          sender:
+            m.speaker === "BOT" ? ("character" as const) : ("user" as const),
           text: m.message,
           audioUrl: m.audioUrl,
         })),
@@ -236,70 +250,70 @@ export default function NunchikochePage() {
         <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10">
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
             <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className={`flex ${msg.sender === "user" ? "justify-end" : "items-start gap-3"}`}
-              >
-                {msg.sender === "character" && (
-                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                      <Image
-                        src={chatChar.cardImage ?? CARD_IMAGES[0]}
-                        alt={chatChar.name}
-                        width={48}
-                        height={48}
-                        className="object-cover w-full h-full"
-                      />
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className={`flex ${msg.sender === "user" ? "justify-end" : "items-start gap-3"}`}
+                >
+                  {msg.sender === "character" && (
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full overflow-hidden">
+                        <Image
+                          src={chatChar.cardImage ?? CARD_IMAGES[0]}
+                          alt={chatChar.name}
+                          width={48}
+                          height={48}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {chatChar.name}
+                      </span>
+                      <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-400 rounded-full transition-all duration-500"
+                          style={{ width: `${moodPercent}%` }}
+                        />
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {chatChar.name}
-                    </span>
-                    <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-400 rounded-full transition-all duration-500"
-                        style={{ width: `${moodPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {msg.sender === "character" ? (
-                  <div className="flex items-center gap-2">
-                    <div className="bg-[#E5F5D8] px-4 py-3 rounded-2xl rounded-tl-none text-sm text-gray-800 max-w-xs">
+                  )}
+                  {msg.sender === "character" ? (
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#E5F5D8] px-4 py-3 rounded-2xl rounded-tl-none text-sm text-gray-800 max-w-xs">
+                        {msg.isTyping ? (
+                          <span className="text-gray-400">입력중...</span>
+                        ) : (
+                          msg.text
+                        )}
+                      </div>
                       {msg.isTyping ? (
-                        <span className="text-gray-400">입력중...</span>
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />
                       ) : (
-                        msg.text
+                        <button
+                          className="flex-shrink-0"
+                          onClick={() => {
+                            if (msg.audioUrl) new Audio(msg.audioUrl).play();
+                          }}
+                        >
+                          <Image
+                            src="/images/sound.png"
+                            alt="소리"
+                            width={20}
+                            height={20}
+                          />
+                        </button>
                       )}
                     </div>
-                    {msg.isTyping ? (
-                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />
-                    ) : (
-                      <button
-                        className="flex-shrink-0"
-                        onClick={() => {
-                          if (msg.audioUrl) new Audio(msg.audioUrl).play();
-                        }}
-                      >
-                        <Image
-                          src="/images/sound.png"
-                          alt="소리"
-                          width={20}
-                          height={20}
-                        />
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tr-none text-sm text-gray-800 max-w-xs shadow-sm">
-                    {msg.text}
-                  </div>
-                )}
-              </motion.div>
-            ))}
+                  ) : (
+                    <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tr-none text-sm text-gray-800 max-w-xs shadow-sm">
+                      {msg.text}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
             </AnimatePresence>
             <div ref={messagesEndRef} />
           </div>
@@ -406,7 +420,12 @@ export default function NunchikochePage() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/search.png" alt="search" className="w-4 h-4" style={{ mixBlendMode: "multiply" }} />
+                  <img
+                    src="/images/search.png"
+                    alt="search"
+                    className="w-4 h-4"
+                    style={{ mixBlendMode: "multiply" }}
+                  />
                 </span>
                 <input
                   value={searchQuery}
