@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
@@ -29,6 +30,7 @@ const OPTION_COLORS = [
 ];
 
 export default function SentencePage() {
+  const router = useRouter();
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<
     "none" | "correct" | "incorrect" | "hint"
@@ -197,7 +199,7 @@ export default function SentencePage() {
         <h1 className="font-display text-xl font-bold text-gray-700">
           문장 분해 연습
         </h1>
-        <button className="flex-shrink-0">
+        <button className="flex-shrink-0" onClick={() => router.push("/main")}>
           <Image src="/images/close.png" alt="닫기" width={32} height={32} />
         </button>
       </header>

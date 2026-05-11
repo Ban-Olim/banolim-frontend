@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, GraphWord } from "../../lib/api";
@@ -76,6 +77,7 @@ function EmptyState() {
 
 // ── 메인 ─────────────────────────────────────────────────────────────────────
 export default function VocabularyPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [centerIdx, setCenterIdx] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export default function VocabularyPage() {
             </span>
           )}
         </div>
-        <button className="flex-shrink-0">
+        <button className="flex-shrink-0" onClick={() => router.push("/main")}>
           <Image src="/images/close.png" alt="닫기" width={32} height={32} />
         </button>
       </header>
