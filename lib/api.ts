@@ -169,7 +169,7 @@ export const api = {
 
   /** 닉네임 및 나이 설정 */
   updateProfile(data: { nickname: string; age: number }) {
-    return request<void>("/api/users/me/profile", {
+    return request<void>("/api/users/me/info", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
