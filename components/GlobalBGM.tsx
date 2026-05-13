@@ -6,6 +6,7 @@ export default function GlobalBGM() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(50);
+  const [sfxVolume, setSfxVolume] = useState(50);
   const [hasInteracted, setHasInteracted] = useState(false);
 
   // 컴포넌트 마운트 시 로컬스토리지에서 볼륨을 가져옵니다.
@@ -13,6 +14,10 @@ export default function GlobalBGM() {
     const savedVolume = localStorage.getItem("bgmVolume");
     if (savedVolume !== null) {
       setVolume(Number(savedVolume));
+    }
+    const savedSfxVolume = localStorage.getItem("sfxVolume");
+    if (savedSfxVolume !== null) {
+      setSfxVolume(Number(savedSfxVolume));
     }
   }, []);
 
@@ -50,10 +55,15 @@ export default function GlobalBGM() {
     const handleVolumeChange = (e: CustomEvent<number>) => {
       setVolume(e.detail);
     };
+    const handleSfxVolumeChange = (e: CustomEvent<number>) => {
+      setSfxVolume(e.detail);
+    };
 
     window.addEventListener("bgmVolumeChange", handleVolumeChange as EventListener);
+    window.addEventListener("sfxVolumeChange", handleSfxVolumeChange as EventListener);
     return () => {
       window.removeEventListener("bgmVolumeChange", handleVolumeChange as EventListener);
+      window.removeEventListener("sfxVolumeChange", handleSfxVolumeChange as EventListener);
     };
   }, []);
 
@@ -92,9 +102,9 @@ export default function GlobalBGM() {
         target.closest('[role="button"]') || 
         target.closest('.cursor-pointer')
       ) {
-        if (volume > 0) {
+        if (sfxVolume > 0) {
           const clickAudio = new Audio("/click.mp3");
-          clickAudio.volume = volume / 100;
+          clickAudio.volume = sfxVolume / 100;
           clickAudio.play().catch((err) => console.warn("Click sound play error:", err));
         }
       }
@@ -106,7 +116,7 @@ export default function GlobalBGM() {
     return () => {
       window.removeEventListener("click", handleGlobalClick, true);
     };
-  }, [volume]);
+  }, [sfxVolume]);
 
   // bgm 파일은 /banolim_bgm.mp3 에 존재한다고 가정
   return (
