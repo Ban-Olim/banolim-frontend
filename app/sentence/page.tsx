@@ -204,7 +204,7 @@ export default function SentencePage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md m-4 rounded-3xl shadow-sm z-10">
-        <div className="w-36 h-14 relative">
+        <div className="w-56 h-20 relative">
           <Image
             src="/logo.jpg"
             alt="로고"
@@ -248,7 +248,10 @@ export default function SentencePage() {
           <span className="flex-1 text-center text-s-18b font-bold text-gray-800">
             {problem!.sentenceText}
           </span>
-          <button className="hover:scale-110 transition-transform flex-shrink-0">
+          <button
+            className="hover:scale-110 transition-transform flex-shrink-0"
+            onClick={() => { if (problem!.sentenceAudioUrl) new Audio(problem!.sentenceAudioUrl).play(); }}
+          >
             <Image src="/images/sound.png" alt="소리" width={28} height={28} />
           </button>
         </div>

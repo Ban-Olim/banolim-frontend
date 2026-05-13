@@ -17,8 +17,8 @@ export default function SignupPage() {
   const showNicknameError = nickname.length > 0 && !isNicknameValid;
 
   const ageNumber = parseInt(age);
-  const isAgeValid = !isNaN(ageNumber) && ageNumber >= 1 && ageNumber <= 100;
-  const showAgeError = age.length > 0 && !isAgeValid;
+  const isAgeValid = !isNaN(ageNumber) && ageNumber >= 7 && ageNumber <= 13;
+  const showAgeError = false;
 
   const isFormValid = isNicknameValid && isAgeValid;
 
@@ -77,12 +77,12 @@ export default function SignupPage() {
             className={`w-full h-[64px] px-5 rounded-2xl bg-gray-0 border-[2px] transition-all text-b-16r focus:outline-none
               ${showAgeError ? "border-red-main" : "border-gray-300 focus:border-green-main"}`}
           />
-          {showAgeError ? (
+          {age.length > 0 && !isAgeValid ? (
             <p className="text-b-14r text-red-main px-1 font-medium">
-              유효하지 않은 나이입니다. 1세 이상 입력해주세요
+              7세 이상 13세 이하만 입력 가능합니다.
             </p>
           ) : (
-            age.length > 0 && (
+            age.length > 0 && isAgeValid && (
               <p className="text-b-14r text-green-main px-1">유효한 나이입니다.</p>
             )
           )}

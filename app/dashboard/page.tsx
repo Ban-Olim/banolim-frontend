@@ -510,8 +510,8 @@ export default function DashboardPage() {
                     대시보드
                 </h1>
                 <div className="flex items-center gap-2">
-                    <button onClick={openSettings} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors text-sm">
-                        ⚙️
+                    <button onClick={openSettings} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <Image src="/setting-icon.png" alt="설정" width={20} height={20} />
                     </button>
                     <button onClick={() => window.location.href = '/main'} className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors">
                         ✕
