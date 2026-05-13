@@ -138,7 +138,7 @@ export default function VocabularyPage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm">
-        <div className="w-36 h-14 relative">
+        <div className="w-56 h-20 relative">
           <Image src="/logo.jpg" alt="로고" fill className="object-contain" style={{ mixBlendMode: "multiply" }} />
         </div>
         <div className="flex items-center gap-3">
