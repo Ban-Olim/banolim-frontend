@@ -137,10 +137,10 @@ export default function DashboardPage() {
         const trimmedNickname = settingsNickname.trim();
         const isNicknameValid = trimmedNickname.length >= 1 && trimmedNickname.length <= 10;
         const ageNumber = parseInt(settingsAge);
-        const isAgeValid = !isNaN(ageNumber) && ageNumber >= 1 && ageNumber <= 100;
+        const isAgeValid = !isNaN(ageNumber) && ageNumber >= 7 && ageNumber <= 13;
 
         if (!isNicknameValid || !isAgeValid) {
-            setSettingsError("닉네임(1~10자)과 나이(1~100)를 확인해주세요.");
+            setSettingsError("닉네임(1~10자)과 나이(7~13세)를 확인해주세요.");
             return;
         }
 
@@ -918,7 +918,7 @@ export default function DashboardPage() {
                                     type="number"
                                     value={settingsAge}
                                     onChange={(e) => setSettingsAge(e.target.value)}
-                                    placeholder="1세 이상 100세 이하"
+                                    placeholder="7세 이상 13세 이하"
                                     className="w-full bg-[#F8F9FA] border border-gray-200 rounded-[12px] px-4 py-3 text-[14px] font-bold text-gray-800 focus:outline-none focus:border-[#C6FA98] transition-colors"
                                 />
                             </div>
