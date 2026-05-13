@@ -203,7 +203,7 @@ export default function SentencePage() {
       }}
     >
       {/* 헤더 */}
-      <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md m-4 rounded-3xl shadow-sm z-10">
+      <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
         <div className="w-36 h-14 relative scale-125 origin-left">
           <Image
             src="/logo.jpg"
