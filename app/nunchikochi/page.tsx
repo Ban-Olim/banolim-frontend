@@ -60,7 +60,7 @@ function PageHeader({
 }) {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
-      <div className="w-56 h-20 relative">
+      <div className="w-36 h-14 relative scale-125 origin-left">
         <Image
           src="/logo.jpg"
           alt="로고"
