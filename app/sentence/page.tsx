@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
@@ -29,6 +30,7 @@ const OPTION_COLORS = [
 ];
 
 export default function SentencePage() {
+  const router = useRouter();
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<
     "none" | "correct" | "incorrect" | "hint"
@@ -40,24 +42,34 @@ export default function SentencePage() {
   const [problemIndex, setProblemIndex] = useState(0);
   const [allDone, setAllDone] = useState(false);
 
-  const { data: problems, isLoading, isError } = useQuery({
+  const {
+    data: problems,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["sentencePractice"],
     queryFn: () => api.getSentencePractice(),
   });
 
-  const problem = problems && problems.length > 0 ? problems[problemIndex] : null;
+  const problem =
+    problems && problems.length > 0 ? problems[problemIndex] : null;
 
   // 문제 로드 시 슬롯/단어 초기화
   useEffect(() => {
     if (!problem || !problem.sentenceData) return;
-    const words: WordChip[] = problem.sentenceData.options.map((text: string, i: number) => ({
-      id: `w${i}`,
-      text,
-      colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
-    }));
+    const words: WordChip[] = problem.sentenceData.options.map(
+      (text: string, i: number) => ({
+        id: `w${i}`,
+        text,
+        colorClass: OPTION_COLORS[i % OPTION_COLORS.length],
+      }),
+    );
     setAvailableWords(words);
     setSlots(
-      problem.sentenceData.slots.map((slot: any) => ({ ...slot, currentWord: null })),
+      problem.sentenceData.slots.map((slot: any) => ({
+        ...slot,
+        currentWord: null,
+      })),
     );
   }, [problem]);
 
@@ -99,7 +111,12 @@ export default function SentencePage() {
       slots.forEach((s) => {
         userAnswers[String(s.slotOrder)] = s.currentWord?.text ?? "";
       });
-      console.log("[제출] sentenceProblemId:", problem.sentenceProblemId, "userAnswers:", userAnswers);
+      console.log(
+        "[제출] sentenceProblemId:",
+        problem.sentenceProblemId,
+        "userAnswers:",
+        userAnswers,
+      );
       const result = await api.submitSentence({
         sentenceProblemId: problem.sentenceProblemId,
         userAnswers,
@@ -187,13 +204,19 @@ export default function SentencePage() {
     >
       {/* 헤더 */}
       <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-md m-4 rounded-3xl shadow-sm z-10">
-        <div className="w-[100px] h-[40px] bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-s-16sb">
-          로고
+        <div className="w-36 h-14 relative">
+          <Image
+            src="/logo.jpg"
+            alt="로고"
+            fill
+            className="object-contain"
+            style={{ mixBlendMode: "multiply" }}
+          />
         </div>
         <h1 className="font-display text-xl font-bold text-gray-700">
           문장 분해 연습
         </h1>
-        <button className="flex-shrink-0">
+        <button className="flex-shrink-0" onClick={() => router.push("/main")}>
           <Image src="/images/close.png" alt="닫기" width={32} height={32} />
         </button>
       </header>
@@ -241,9 +264,10 @@ export default function SentencePage() {
                 onDrop={() => handleDrop(slot.slotOrder)}
                 onClick={() => handleSlotClick(slot.slotOrder)}
                 className={`flex-1 min-w-[100px] max-w-[200px] h-16 rounded-2xl flex items-center justify-center text-sm font-semibold transition-all border-2 cursor-pointer select-none
-                  ${slot.currentWord
-                    ? `${slot.currentWord.colorClass} shadow-sm`
-                    : "bg-white border-gray-300 text-gray-500 shadow-inner"
+                  ${
+                    slot.currentWord
+                      ? `${slot.currentWord.colorClass} shadow-sm`
+                      : "bg-white border-gray-300 text-gray-500 shadow-inner"
                   }`}
               >
                 {slot.currentWord ? slot.currentWord.text : slot.slotLabel}

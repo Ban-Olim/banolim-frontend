@@ -111,6 +111,17 @@ export interface GraphWord {
   definition: string;
 }
 
+export interface GraphLink {
+  source: string;
+  target: string;
+  type: string;
+}
+
+export interface GraphData {
+  words: GraphWord[];
+  links: GraphLink[];
+}
+
 export interface WordSearchResult {
   senseId: string;
   word: string;
@@ -158,7 +169,7 @@ export const api = {
 
   /** 닉네임 및 나이 설정 */
   updateProfile(data: { nickname: string; age: number }) {
-    return request<void>("/api/users/me/profile", {
+    return request<void>("/api/users/me/info", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
@@ -247,14 +258,20 @@ export const api = {
   },
 
   /** 지식그래프 조회 */
-  async getGraph() {
-    const res = await request<{ nodes: { id: string; label: string; group: string; definition: string }[] } | null>("/api/graph");
-    return (res?.nodes ?? []).map((n) => ({
-      senseId: n.id,
-      word: n.label,
-      pos: n.group,
-      definition: n.definition,
-    }));
+  async getGraph(): Promise<GraphData> {
+    const res = await request<{
+      nodes: { id: string; label: string; group: string; definition: string }[];
+      links: { source: string; target: string; type: string }[];
+    } | null>("/api/graph");
+    return {
+      words: (res?.nodes ?? []).map((n) => ({
+        senseId: n.id,
+        word: n.label,
+        pos: n.group,
+        definition: n.definition,
+      })),
+      links: res?.links ?? [],
+    };
   },
 
   /** 지식그래프 단어 삭제 */

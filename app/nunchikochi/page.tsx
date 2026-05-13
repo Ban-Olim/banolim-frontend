@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import DictionarySidebar from "../../components/dictionary/DictionarySidebar";
 import { api, CharacterListItem, CharacterDetail } from "../../lib/api";
 
@@ -58,8 +60,14 @@ function PageHeader({
 }) {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm z-10">
-      <div className="w-24 h-9 bg-[#DEFCC2] rounded-full flex items-center justify-center text-green-700 text-sm font-semibold">
-        로고
+      <div className="w-36 h-14 relative">
+        <Image
+          src="/logo.jpg"
+          alt="로고"
+          fill
+          className="object-contain"
+          style={{ mixBlendMode: "multiply" }}
+        />
       </div>
       <h1 className="font-display text-xl font-bold text-gray-700">{title}</h1>
       <button onClick={onClose} className="flex-shrink-0">
@@ -70,6 +78,7 @@ function PageHeader({
 }
 
 export default function NunchikochePage() {
+  const router = useRouter();
   const [view, setView] = useState<"selection" | "chat">("selection");
   const [openCardId, setOpenCardId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,6 +94,9 @@ export default function NunchikochePage() {
   const [characterDetails, setCharacterDetails] = useState<
     Record<number, CharacterDetail>
   >({});
+  const [scoreDiff, setScoreDiff] = useState<number | null>(null);
+  const prevMoodRef = useRef<number>(30);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // 캐릭터 목록 조회
   const { data: rawCharacters = [], isLoading: isLoadingChars } = useQuery({
@@ -93,6 +105,23 @@ export default function NunchikochePage() {
   });
 
   const characters = rawCharacters.map(withDefaults);
+
+  // 메시지 추가 시 자동 스크롤 (레이아웃 이동 없이 즉시)
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  // 점수 변화 감지 (메시지 응답 후에만)
+  useEffect(() => {
+    const diff = moodPercent - prevMoodRef.current;
+    prevMoodRef.current = moodPercent;
+    if (diff > 0) {
+      setScoreDiff(diff);
+      const t = setTimeout(() => setScoreDiff(null), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [moodPercent]);
 
   // 카드 열릴 때 캐릭터 상세 조회
   useEffect(() => {
@@ -174,13 +203,23 @@ export default function NunchikochePage() {
       const res = await api.createSession(char.characterId);
       console.log("[createSession] raw response", res);
       const { sessionId: sid, messages: initMessages, temperature } = res;
-      console.log("[createSession] sid:", sid, "msgs:", initMessages, "temp:", temperature);
+      console.log(
+        "[createSession] sid:",
+        sid,
+        "msgs:",
+        initMessages,
+        "temp:",
+        temperature,
+      );
       setSessionId(sid);
-      setMoodPercent(temperature ?? 30);
+      const initTemp = temperature ?? 30;
+      prevMoodRef.current = initTemp;
+      setMoodPercent(initTemp);
       setMessages(
         (initMessages ?? []).map((m) => ({
           id: `chat-${m.chatId}`,
-          sender: m.speaker === "BOT" ? ("character" as const) : ("user" as const),
+          sender:
+            m.speaker === "BOT" ? ("character" as const) : ("user" as const),
           text: m.message,
           audioUrl: m.audioUrl,
         })),
@@ -203,7 +242,7 @@ export default function NunchikochePage() {
   if (view === "chat" && chatChar) {
     return (
       <main
-        className="min-h-screen flex flex-col relative overflow-hidden"
+        className="h-screen flex flex-col relative overflow-hidden"
         style={{
           backgroundImage: "url('/nunchikochi_bg.png')",
           backgroundSize: "cover",
@@ -211,66 +250,95 @@ export default function NunchikochePage() {
         }}
       >
         <BackgroundDecorations />
+
+        {/* 점수 표시: 뷰포트 고정 → 스크롤해도 항상 상단에 */}
+        <AnimatePresence>
+          {scoreDiff !== null && (
+            <motion.div
+              key={String(moodPercent)}
+              initial={{ opacity: 0, y: -8, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.85 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="fixed top-5 left-0 right-0 z-50 flex justify-center pointer-events-none"
+            >
+              <span className="bg-[#18181b] text-white text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg">
+                +{scoreDiff}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
-        <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.sender === "user" ? "justify-end" : "items-start gap-3"}`}
-              >
-                {msg.sender === "character" && (
-                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                      <Image
-                        src={chatChar.cardImage ?? CARD_IMAGES[0]}
-                        alt={chatChar.name}
-                        width={48}
-                        height={48}
-                        className="object-cover w-full h-full"
-                      />
+        <div className="flex-1 mx-3 mb-3 bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm flex flex-col overflow-hidden z-10 min-h-0">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className={`flex ${msg.sender === "user" ? "justify-end" : "items-start gap-3"}`}
+                >
+                  {msg.sender === "character" && (
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full overflow-hidden">
+                        <Image
+                          src={chatChar.cardImage ?? CARD_IMAGES[0]}
+                          alt={chatChar.name}
+                          width={48}
+                          height={48}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {chatChar.name}
+                      </span>
+                      <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-400 rounded-full transition-all duration-500"
+                          style={{ width: `${moodPercent}%` }}
+                        />
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {chatChar.name}
-                    </span>
-                    <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-400 rounded-full transition-all duration-500"
-                        style={{ width: `${moodPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {msg.sender === "character" ? (
-                  <div className="flex items-center gap-2">
-                    <div className="bg-[#E5F5D8] px-4 py-3 rounded-2xl rounded-tl-none text-sm text-gray-800 max-w-xs">
+                  )}
+                  {msg.sender === "character" ? (
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#E5F5D8] px-4 py-3 rounded-2xl rounded-tl-none text-sm text-gray-800 max-w-xs">
+                        {msg.isTyping ? (
+                          <span className="text-gray-400">입력중...</span>
+                        ) : (
+                          msg.text
+                        )}
+                      </div>
                       {msg.isTyping ? (
-                        <span className="text-gray-400">입력중...</span>
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />
                       ) : (
-                        msg.text
+                        <button
+                          className="flex-shrink-0"
+                          onClick={() => {
+                            if (msg.audioUrl) new Audio(msg.audioUrl).play();
+                          }}
+                        >
+                          <Image
+                            src="/images/sound.png"
+                            alt="소리"
+                            width={20}
+                            height={20}
+                          />
+                        </button>
                       )}
                     </div>
-                    {msg.isTyping ? (
-                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />
-                    ) : (
-                      <button className="flex-shrink-0">
-                        <Image
-                          src="/images/sound.png"
-                          alt="소리"
-                          width={20}
-                          height={20}
-                        />
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tr-none text-sm text-gray-800 max-w-xs shadow-sm">
-                    {msg.text}
-                  </div>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tr-none text-sm text-gray-800 max-w-xs shadow-sm">
+                      {msg.text}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
@@ -348,7 +416,7 @@ export default function NunchikochePage() {
       }}
     >
       <BackgroundDecorations />
-      <PageHeader title="눈치코치" />
+      <PageHeader title="눈치코치" onClose={() => router.push("/main")} />
 
       <div className="flex gap-3 mx-3 mb-3 z-10 flex-1 min-h-0">
         {/* 왼쪽 – 성격 목록 */}
@@ -375,7 +443,12 @@ export default function NunchikochePage() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/search.png" alt="search" className="w-4 h-4" style={{ mixBlendMode: "multiply" }} />
+                  <img
+                    src="/images/search.png"
+                    alt="search"
+                    className="w-4 h-4"
+                    style={{ mixBlendMode: "multiply" }}
+                  />
                 </span>
                 <input
                   value={searchQuery}
