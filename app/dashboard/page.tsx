@@ -88,6 +88,7 @@ export default function DashboardPage() {
     const [settingsNickname, setSettingsNickname] = useState("");
     const [settingsAge, setSettingsAge] = useState("");
     const [bgmVolume, setBgmVolume] = useState(50);
+    const [sfxVolume, setSfxVolume] = useState(50);
     const [isSettingsSaving, setIsSettingsSaving] = useState(false);
     const [settingsError, setSettingsError] = useState("");
     const [myProfile, setMyProfile] = useState<{ nickname: string; age: number } | null>(null);
@@ -149,6 +150,8 @@ export default function DashboardPage() {
             setIsSettingsOpen(false);
             localStorage.setItem("bgmVolume", String(bgmVolume));
             window.dispatchEvent(new CustomEvent('bgmVolumeChange', { detail: bgmVolume }));
+            localStorage.setItem("sfxVolume", String(sfxVolume));
+            window.dispatchEvent(new CustomEvent('sfxVolumeChange', { detail: sfxVolume }));
         } catch (error) {
             console.error("Failed to save profile:", error);
             setSettingsError("저장에 실패했습니다. 다시 시도해주세요.");
@@ -158,8 +161,10 @@ export default function DashboardPage() {
     };
 
     useEffect(() => {
-        const vol = localStorage.getItem("bgmVolume");
-        if (vol) setBgmVolume(Number(vol));
+        const bgmVol = localStorage.getItem("bgmVolume");
+        if (bgmVol) setBgmVolume(Number(bgmVol));
+        const sfxVol = localStorage.getItem("sfxVolume");
+        if (sfxVol) setSfxVolume(Number(sfxVol));
     }, []);
 
     useEffect(() => {
@@ -890,19 +895,7 @@ export default function DashboardPage() {
                         <button onClick={() => setIsSettingsOpen(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors">✕</button>
                         <h2 className="text-xl font-display font-extrabold text-gray-800 mb-6 text-center">설정</h2>
 
-                        {myProfile ? (
-                            <div className="bg-[#F2FEE5] border border-[#CEFA93] rounded-[16px] p-4 mb-6 text-center shadow-sm">
-                                <p className="text-[12px] text-gray-500 font-bold mb-1">현재 나의 프로필</p>
-                                <p className="text-[16px] font-extrabold text-gray-800">
-                                    {myProfile.nickname} <span className="text-[14px] text-gray-600 font-bold">({myProfile.age}세)</span>
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="bg-[#F8F9FA] border border-gray-200 rounded-[16px] p-4 mb-6 text-center shadow-sm">
-                                <p className="text-[13px] text-gray-500 font-bold">프로필 정보를 불러올 수 없습니다.</p>
-                                <p className="text-[11px] text-gray-400 mt-1">로그인(토큰) 상태를 확인해주세요.</p>
-                            </div>
-                        )}
+
 
                         <div className="flex flex-col gap-4 mb-6">
                             <div className="flex flex-col gap-1.5">
@@ -942,6 +935,26 @@ export default function DashboardPage() {
                                         setBgmVolume(newVol);
                                         localStorage.setItem("bgmVolume", String(newVol));
                                         window.dispatchEvent(new CustomEvent('bgmVolumeChange', { detail: newVol }));
+                                    }}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#C6FA98]"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[13px] font-bold text-gray-600">효과음 소리</label>
+                                    <span className="text-[12px] font-bold text-[#65A30D]">{sfxVolume}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={sfxVolume}
+                                    onChange={(e) => {
+                                        const newVol = Number(e.target.value);
+                                        setSfxVolume(newVol);
+                                        localStorage.setItem("sfxVolume", String(newVol));
+                                        window.dispatchEvent(new CustomEvent('sfxVolumeChange', { detail: newVol }));
                                     }}
                                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#C6FA98]"
                                 />
