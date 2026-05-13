@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from "next/image";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 // --- 타입 정의 ---
 type WordType = 'subject' | 'time' | 'place' | 'action';
@@ -133,25 +134,27 @@ export default function DashboardPage() {
     };
 
     const saveSettings = async () => {
-        const isNicknameValid = /^[a-z가-힣]{1,8}$/.test(settingsNickname);
+        const trimmedNickname = settingsNickname.trim();
+        const isNicknameValid = trimmedNickname.length >= 1 && trimmedNickname.length <= 10;
         const ageNumber = parseInt(settingsAge);
         const isAgeValid = !isNaN(ageNumber) && ageNumber >= 1 && ageNumber <= 100;
 
         if (!isNicknameValid || !isAgeValid) {
-            setSettingsError("닉네임(소문자/한글 1~8자)과 나이(1~100)를 확인해주세요.");
+            setSettingsError("닉네임(1~10자)과 나이(1~100)를 확인해주세요.");
             return;
         }
 
         setIsSettingsSaving(true);
         setSettingsError("");
         try {
-            await api.updateProfile({ nickname: settingsNickname, age: ageNumber });
-            setMyProfile({ nickname: settingsNickname, age: ageNumber });
+            await api.updateProfile({ nickname: trimmedNickname, age: ageNumber });
+            setMyProfile({ nickname: trimmedNickname, age: ageNumber });
             setIsSettingsOpen(false);
             localStorage.setItem("bgmVolume", String(bgmVolume));
             window.dispatchEvent(new CustomEvent('bgmVolumeChange', { detail: bgmVolume }));
             localStorage.setItem("sfxVolume", String(sfxVolume));
             window.dispatchEvent(new CustomEvent('sfxVolumeChange', { detail: sfxVolume }));
+            toast.success("설정이 저장되었습니다.");
         } catch (error) {
             console.error("Failed to save profile:", error);
             setSettingsError("저장에 실패했습니다. 다시 시도해주세요.");
