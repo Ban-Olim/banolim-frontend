@@ -73,18 +73,21 @@ export default function VocabularyPage() {
   const words: GraphWord[] = useMemo(() => data?.words ?? [], [data]);
   const links: GraphLink[] = useMemo(() => data?.links ?? [], [data]);
 
+  const measureGraph = useCallback(() => {
+    const el = graphContainerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    if (width > 0 && height > 0) setGraphSize({ width: Math.floor(width), height: Math.floor(height) });
+  }, []);
+
   useEffect(() => {
     const el = graphContainerRef.current;
     if (!el) return;
-    const measure = () => {
-      const { clientWidth: w, clientHeight: h } = el;
-      if (w > 0 && h > 0) setGraphSize({ width: w, height: h });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
+    measureGraph();
+    const ro = new ResizeObserver(measureGraph);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [measureGraph]);
 
   // force 설정 — ref 준비되면 딱 한 번만 적용
   useEffect(() => {
@@ -121,6 +124,7 @@ export default function VocabularyPage() {
   }), [words, links, initPos]);
 
   const selectedWord = useMemo(() => words.find((w) => w.senseId === selectedId) ?? null, [words, selectedId]);
+
 
   // 원형 노드 + 아래 텍스트 (selectedIdRef 사용 → 클릭해도 그래프 재초기화 없음)
   const nodeCanvasObject = useCallback((raw: FGNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -216,81 +220,89 @@ export default function VocabularyPage() {
           <EmptyState />
         ) : view === "graph" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div ref={graphContainerRef} className="flex-1 min-h-0 w-full cursor-grab active:cursor-grabbing">
-              <ForceGraph2D
-                ref={fgRef}
-                graphData={graphData}
-                width={graphSize.width}
-                height={graphSize.height}
-                nodeLabel=""
-                nodeCanvasObject={nodeCanvasObject}
-                nodeCanvasObjectMode={() => "replace"}
-                nodePointerAreaPaint={nodePointerAreaPaint}
-                linkColor={(link) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB"}
-                linkWidth={1.5}
-                linkCurvature={0.05}
-                linkCanvasObjectMode={() => "after"}
-                linkCanvasObject={(link, ctx, globalScale) => {
-                  const l = link as FGNode & { source?: FGNode; target?: FGNode };
-                  const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
-                  const tx = l.target?.x ?? 0; const ty = l.target?.y ?? 0;
-                  if (!sx && !tx) return;
-                  const mx = (sx + tx) / 2; const my = (sy + ty) / 2;
-                  const label = LINK_LABEL[String(l.type ?? "")] ?? "";
-                  if (!label) return;
-                  const fontSize = Math.max(9 / globalScale, 2);
-                  ctx.font = `${fontSize}px sans-serif`;
-                  const tw = ctx.measureText(label).width;
-                  const pad = 3 / globalScale;
-                  ctx.fillStyle = "rgba(255,255,255,0.88)";
-                  ctx.fillRect(mx - tw / 2 - pad, my - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
-                  ctx.fillStyle = "#9ca3af";
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillText(label, mx, my);
-                }}
-                onNodeClick={(node) => setSelectedId(String((node as FGNode).id ?? ""))}
-                backgroundColor="transparent"
-                d3AlphaDecay={0.02}
-                d3VelocityDecay={0.3}
-              />
+            {/* 그래프 + 정보 패널 오버레이 */}
+            <div className="flex-1 relative min-h-0">
+              <div ref={graphContainerRef} className="absolute inset-0 cursor-grab active:cursor-grabbing">
+                <ForceGraph2D
+                  ref={fgRef}
+                  graphData={graphData}
+                  width={graphSize.width}
+                  height={graphSize.height}
+                  nodeLabel=""
+                  nodeCanvasObject={nodeCanvasObject}
+                  nodeCanvasObjectMode={() => "replace"}
+                  nodePointerAreaPaint={nodePointerAreaPaint}
+                  linkColor={(link) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB"}
+                  linkWidth={1.5}
+                  linkCurvature={0.05}
+                  linkCanvasObjectMode={() => "after"}
+                  linkCanvasObject={(link, ctx, globalScale) => {
+                    const l = link as FGNode & { source?: FGNode; target?: FGNode };
+                    const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
+                    const tx = l.target?.x ?? 0; const ty = l.target?.y ?? 0;
+                    if (!sx && !tx) return;
+                    const mx = (sx + tx) / 2; const my = (sy + ty) / 2;
+                    const label = LINK_LABEL[String(l.type ?? "")] ?? "";
+                    if (!label) return;
+                    const fontSize = Math.max(9 / globalScale, 2);
+                    ctx.font = `${fontSize}px sans-serif`;
+                    const tw = ctx.measureText(label).width;
+                    const pad = 3 / globalScale;
+                    ctx.fillStyle = "rgba(255,255,255,0.88)";
+                    ctx.fillRect(mx - tw / 2 - pad, my - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
+                    ctx.fillStyle = "#9ca3af";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(label, mx, my);
+                  }}
+                  onNodeClick={(node) => setSelectedId(String((node as FGNode).id ?? ""))}
+                  backgroundColor="transparent"
+                  d3AlphaDecay={0.02}
+                  d3VelocityDecay={0.3}
+                />
+              </div>
+
+              {/* 선택 단어 패널 — 그래프 위에 오버레이 (캔버스 크기 변화 없음) */}
+              {selectedWord && (
+                <div className="absolute bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm border-t border-[#D1FAC0] px-5 py-3 flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-bold text-gray-800 text-base">{selectedWord.word}</span>
+                      <span className="text-xs text-gray-400">[{selectedWord.pos}]</span>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{selectedWord.definition}</p>
+                    {links.filter(l => l.source === selectedWord.senseId || l.target === selectedWord.senseId).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {links.filter(l => l.source === selectedWord.senseId || l.target === selectedWord.senseId)
+                          .map((l, i) => {
+                            const otherId = l.source === selectedWord.senseId ? l.target : l.source;
+                            const other = words.find(w => w.senseId === otherId);
+                            if (!other) return null;
+                            return (
+                              <button key={i} onClick={() => setSelectedId(otherId)}
+                                className="px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600 hover:border-green-300 transition-colors"
+                              >
+                                {LINK_LABEL[l.type] ?? l.type}: <span className="font-semibold">{other.word}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setSelectedId(null)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">닫기</button>
+                    <button onClick={() => handleDelete(selectedWord.senseId)}
+                      disabled={deletingId === selectedWord.senseId}
+                      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 transition-colors"
+                    >
+                      {deletingId === selectedWord.senseId ? "삭제 중..." : "삭제"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {selectedWord && (
-              <div className="flex-shrink-0 bg-[#F9FFF4] border-t border-[#D1FAC0] px-5 py-3 flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-bold text-gray-800 text-base">{selectedWord.word}</span>
-                    <span className="text-xs text-gray-400">[{selectedWord.pos}]</span>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{selectedWord.definition}</p>
-                  {links.filter(l => l.source === selectedWord.senseId || l.target === selectedWord.senseId).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {links.filter(l => l.source === selectedWord.senseId || l.target === selectedWord.senseId)
-                        .map((l, i) => {
-                          const otherId = l.source === selectedWord.senseId ? l.target : l.source;
-                          const other = words.find(w => w.senseId === otherId);
-                          if (!other) return null;
-                          return (
-                            <button key={i} onClick={() => setSelectedId(otherId)}
-                              className="px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600 hover:border-green-300 transition-colors"
-                            >
-                              {LINK_LABEL[l.type] ?? l.type}: <span className="font-semibold">{other.word}</span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-                <button onClick={() => handleDelete(selectedWord.senseId)}
-                  disabled={deletingId === selectedWord.senseId}
-                  className="flex-shrink-0 text-xs text-red-400 hover:text-red-600 disabled:opacity-40 transition-colors"
-                >
-                  {deletingId === selectedWord.senseId ? "삭제 중..." : "삭제"}
-                </button>
-              </div>
-            )}
-
+            {/* 범례 */}
             <div className="flex-shrink-0 flex gap-3 flex-wrap items-center px-5 py-2.5 border-t border-gray-100">
               {Object.entries(POS_HEX).map(([pos, c]) => (
                 <div key={pos} className="flex items-center gap-1">
