@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -55,46 +55,63 @@ function EmptyState() {
   );
 }
 
+// ForceGraph2D를 React.memo로 완전 격리 — graphData/width/height 변경 시에만 re-render
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const StableGraph = React.memo(function StableGraph({ fgRef, ...props }: any) {
+  return <ForceGraph2D ref={fgRef} {...props} />;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}, (prev: any, next: any) =>
+  prev.graphData === next.graphData &&
+  prev.width === next.width &&
+  prev.height === next.height
+);
+
 export default function VocabularyPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
-  const graphContainerRef = useRef<HTMLDivElement>(null);
   const [graphSize, setGraphSize] = useState<{ width: number; height: number } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
   const forcesSet = useRef(false);
   const selectedIdRef = useRef<string | null>(null);
+  const containerNodeRef = useRef<HTMLDivElement | null>(null);
   selectedIdRef.current = selectedId;
 
   const { data, isLoading } = useQuery({ queryKey: ["graph"], queryFn: api.getGraph });
   const words: GraphWord[] = useMemo(() => data?.words ?? [], [data]);
   const links: GraphLink[] = useMemo(() => data?.links ?? [], [data]);
 
-  // rAF로 브라우저 페인트 이후 측정 → 새로고침/네비게이션 모두 안정적
-  useEffect(() => {
-    const measure = () => {
-      const el = graphContainerRef.current;
-      if (!el) return;
-      const { width, height } = el.getBoundingClientRect();
+  // ref callback: 그래프 컨테이너 div가 실제 DOM에 붙는 순간 측정
+  // (isLoading → false로 바뀌어 div가 나타날 때 자동 발동)
+  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
+    containerNodeRef.current = node;
+    if (!node) return;
+    requestAnimationFrame(() => {
+      const { width, height } = node.getBoundingClientRect();
       if (width > 0 && height > 0) {
-        setGraphSize((prev) => {
-          if (prev && Math.abs(prev.width - width) < 5 && Math.abs(prev.height - height) < 5) return prev;
-          return { width: Math.floor(width), height: Math.floor(height) };
-        });
+        setGraphSize({ width: Math.floor(width), height: Math.floor(height) });
       }
-    };
-    const raf = requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measure);
-    };
+    });
   }, []);
 
-  // force 설정 — ref 준비되면 딱 한 번만 적용
+  // 창 크기 변경 시 재측정
+  useEffect(() => {
+    const onResize = () => {
+      const node = containerNodeRef.current;
+      if (!node) return;
+      const { width, height } = node.getBoundingClientRect();
+      if (width > 0 && height > 0) {
+        setGraphSize({ width: Math.floor(width), height: Math.floor(height) });
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // force 설정 — ref 준비 후 한 번만 적용
   useEffect(() => {
     if (forcesSet.current) return;
     const fg = fgRef.current;
@@ -105,33 +122,34 @@ export default function VocabularyPage() {
     fg.d3ReheatSimulation();
   });
 
-  // 노드 초기 위치 무작위 배치 (words 바뀔 때만 재생성)
+  // graphData 변경 시 forces 재적용 (단어 삭제 등)
+  const graphDataRef = useRef<unknown>(null);
+
   const initPos = useMemo(() => {
     const map: Record<string, { x: number; y: number }> = {};
-    const spread = 350;
     words.forEach((w) => {
       map[w.senseId] = {
-        x: (Math.random() - 0.5) * spread * 2,
-        y: (Math.random() - 0.5) * spread * 2,
+        x: (Math.random() - 0.5) * 700,
+        y: (Math.random() - 0.5) * 500,
       };
     });
     return map;
   }, [words]);
 
   const graphData = useMemo(() => ({
-    nodes: words.map((w) => ({
-      ...w,
-      id: w.senseId,
-      x: initPos[w.senseId]?.x,
-      y: initPos[w.senseId]?.y,
-    })),
+    nodes: words.map((w) => ({ ...w, id: w.senseId, x: initPos[w.senseId]?.x, y: initPos[w.senseId]?.y })),
     links: links.map((l) => ({ source: l.source, target: l.target, type: l.type })),
   }), [words, links, initPos]);
 
+  // graphData 바뀌면 forces 재적용
+  useEffect(() => {
+    if (graphDataRef.current === graphData) return;
+    graphDataRef.current = graphData;
+    forcesSet.current = false;
+  }, [graphData]);
+
   const selectedWord = useMemo(() => words.find((w) => w.senseId === selectedId) ?? null, [words, selectedId]);
 
-
-  // 원형 노드 + 아래 텍스트 (selectedIdRef 사용 → 클릭해도 그래프 재초기화 없음)
   const nodeCanvasObject = useCallback((raw: FGNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const nx = raw.x ?? 0;
     const ny = raw.y ?? 0;
@@ -160,8 +178,7 @@ export default function VocabularyPage() {
   }, []);
 
   const nodePointerAreaPaint = useCallback((raw: FGNode, color: string, ctx: CanvasRenderingContext2D) => {
-    const nx = raw.x ?? 0;
-    const ny = raw.y ?? 0;
+    const nx = raw.x ?? 0; const ny = raw.y ?? 0;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(nx, ny, NODE_R + 4, 0, 2 * Math.PI, false);
@@ -170,14 +187,8 @@ export default function VocabularyPage() {
 
   const nodeCanvasObjectMode = useCallback(() => "replace" as const, []);
   const linkCanvasObjectMode = useCallback(() => "after" as const, []);
-  const getLinkColor = useCallback(
-    (link: object) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB",
-    [],
-  );
-  const onNodeClick = useCallback(
-    (node: object) => setSelectedId(String((node as FGNode).id ?? "")),
-    [],
-  );
+  const getLinkColor = useCallback((link: object) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB", []);
+  const onNodeClick = useCallback((node: object) => setSelectedId(String((node as FGNode).id ?? "")), []);
   const linkCanvasObject = useCallback((link: object, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const l = link as FGNode & { source?: FGNode; target?: FGNode };
     const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
@@ -192,9 +203,7 @@ export default function VocabularyPage() {
     const pad = 3 / globalScale;
     ctx.fillStyle = "rgba(255,255,255,0.88)";
     ctx.fillRect(mx - tw / 2 - pad, my - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
-    ctx.fillStyle = "#9ca3af";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#9ca3af"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(label, mx, my);
   }, []);
 
@@ -255,31 +264,32 @@ export default function VocabularyPage() {
           <EmptyState />
         ) : view === "graph" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* 그래프 + 정보 패널 오버레이 */}
             <div className="flex-1 relative min-h-0">
-              <div ref={graphContainerRef} className="absolute inset-0 cursor-grab active:cursor-grabbing">
-                {graphSize && <ForceGraph2D
-                  ref={fgRef}
-                  graphData={graphData}
-                  width={graphSize.width}
-                  height={graphSize.height}
-                  nodeLabel=""
-                  nodeCanvasObject={nodeCanvasObject}
-                  nodeCanvasObjectMode={nodeCanvasObjectMode}
-                  nodePointerAreaPaint={nodePointerAreaPaint}
-                  linkColor={getLinkColor}
-                  linkWidth={1.5}
-                  linkCurvature={0.05}
-                  linkCanvasObjectMode={linkCanvasObjectMode}
-                  linkCanvasObject={linkCanvasObject}
-                  onNodeClick={onNodeClick}
-                  backgroundColor="transparent"
-                  d3AlphaDecay={0.02}
-                  d3VelocityDecay={0.3}
-                />}
+              {/* ref callback: div가 DOM에 마운트될 때만 크기 측정 */}
+              <div ref={containerRefCallback} className="absolute inset-0 cursor-grab active:cursor-grabbing">
+                {graphSize && (
+                  <StableGraph
+                    fgRef={fgRef}
+                    graphData={graphData}
+                    width={graphSize.width}
+                    height={graphSize.height}
+                    nodeLabel=""
+                    nodeCanvasObject={nodeCanvasObject}
+                    nodeCanvasObjectMode={nodeCanvasObjectMode}
+                    nodePointerAreaPaint={nodePointerAreaPaint}
+                    linkColor={getLinkColor}
+                    linkWidth={1.5}
+                    linkCurvature={0.05}
+                    linkCanvasObjectMode={linkCanvasObjectMode}
+                    linkCanvasObject={linkCanvasObject}
+                    onNodeClick={onNodeClick}
+                    backgroundColor="transparent"
+                    d3AlphaDecay={0.02}
+                    d3VelocityDecay={0.3}
+                  />
+                )}
               </div>
 
-              {/* 선택 단어 패널 — 그래프 위에 오버레이 (캔버스 크기 변화 없음) */}
               {selectedWord && (
                 <div className="absolute bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm border-t border-[#D1FAC0] px-5 py-3 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -319,7 +329,6 @@ export default function VocabularyPage() {
               )}
             </div>
 
-            {/* 범례 */}
             <div className="flex-shrink-0 flex gap-3 flex-wrap items-center px-5 py-2.5 border-t border-gray-100">
               {Object.entries(POS_HEX).map(([pos, c]) => (
                 <div key={pos} className="flex items-center gap-1">
