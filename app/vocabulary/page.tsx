@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, GraphWord, GraphLink } from "../../lib/api";
 
-const W = 700;
-const H = 420;
-const CX = W / 2;
-const CY = H / 2;
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
+
+type FGNode = { [k: string]: unknown; id?: string | number; x?: number; y?: number; };
+
+const POS_FILL: Record<string, { fill: string; border: string; text: string }> = {
+  명사:   { fill: "#E5F5D8", border: "#b8f08a", text: "#15803d" },
+  동사:   { fill: "#FFD0D5", border: "#fdaeae", text: "#dc2626" },
+  형용사: { fill: "#E1FCFF", border: "#93e8f1", text: "#0e7490" },
+  부사:   { fill: "#FFF8D6", border: "#f6eaa8", text: "#a16207" },
+};
 
 const POS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
   명사:   { bg: "bg-[#E5F5D8]", border: "border-[#b8f08a]", text: "text-green-700"  },
@@ -36,38 +43,6 @@ function posColor(pos: string) {
   return POS_COLOR[pos] ?? { bg: "bg-gray-100", border: "border-gray-300", text: "text-gray-600" };
 }
 
-// 선택 노드 + 직접 연결된 노드만 원형 배치 (ego graph)
-const MAX_NODES = 8; // 중심 제외 최대 표시 수
-
-function computePositions(words: GraphWord[], links: GraphLink[], selectedId: string) {
-  // 연결된 노드 우선
-  const connectedIds = new Set<string>();
-  links.forEach((l) => {
-    if (l.source === selectedId) connectedIds.add(l.target);
-    if (l.target === selectedId) connectedIds.add(l.source);
-  });
-
-  const connected = words.filter((w) => w.senseId !== selectedId && connectedIds.has(w.senseId));
-  const unconnected = words.filter((w) => w.senseId !== selectedId && !connectedIds.has(w.senseId));
-
-  // 연결된 것 먼저, 빈 자리는 나머지로 채움
-  const others = [
-    ...connected,
-    ...unconnected.slice(0, Math.max(0, MAX_NODES - connected.length)),
-  ];
-
-  const n = others.length;
-  const r = Math.min(CX, CY) * (n <= 3 ? 0.5 : n <= 6 ? 0.62 : 0.72);
-
-  const pos: Record<string, { x: number; y: number }> = {};
-  pos[selectedId] = { x: CX, y: CY };
-  others.forEach((w, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-    pos[w.senseId] = { x: CX + r * Math.cos(angle), y: CY + r * Math.sin(angle) };
-  });
-  return { pos, connectedIds };
-}
-
 function EmptyState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center py-16">
@@ -84,32 +59,74 @@ export default function VocabularyPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
+  const graphContainerRef = useRef<HTMLDivElement>(null);
+  const [graphSize, setGraphSize] = useState({ width: 800, height: 500 });
 
   const { data, isLoading } = useQuery({ queryKey: ["graph"], queryFn: api.getGraph });
 
   const words: GraphWord[] = useMemo(() => data?.words ?? [], [data]);
   const links: GraphLink[] = useMemo(() => data?.links ?? [], [data]);
 
-  // 초기 선택: 연결 수 가장 많은 노드
-  const effectiveSelected = useMemo(() => {
-    if (selectedId && words.find((w) => w.senseId === selectedId)) return selectedId;
-    if (words.length === 0) return null;
-    const cnt: Record<string, number> = {};
-    links.forEach((l) => {
-      cnt[l.source] = (cnt[l.source] ?? 0) + 1;
-      cnt[l.target] = (cnt[l.target] ?? 0) + 1;
+  useEffect(() => {
+    const el = graphContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      setGraphSize({ width, height });
     });
-    return words.reduce((a, b) => ((cnt[b.senseId] ?? 0) > (cnt[a.senseId] ?? 0) ? b : a)).senseId;
-  }, [words, links, selectedId]);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const { pos: positions, connectedIds } = useMemo(
-    () => effectiveSelected
-      ? computePositions(words, links, effectiveSelected)
-      : { pos: {} as Record<string, { x: number; y: number }>, connectedIds: new Set<string>() },
-    [words, links, effectiveSelected],
-  );
+  const graphData = useMemo(() => ({
+    nodes: words.map((w) => ({ ...w, id: w.senseId })),
+    links: links.map((l) => ({ source: l.source, target: l.target, type: l.type })),
+  }), [words, links]);
 
-  const selectedWord = words.find((w) => w.senseId === effectiveSelected);
+  const selectedWord = useMemo(() => words.find((w) => w.senseId === selectedId) ?? null, [words, selectedId]);
+
+  const nodeCanvasObject = useCallback((raw: FGNode, ctx: CanvasRenderingContext2D) => {
+    const nx = raw.x ?? 0;
+    const ny = raw.y ?? 0;
+    const label = String(raw.word ?? "");
+    const pos = String(raw.pos ?? "");
+    const isSelected = raw.id === selectedId;
+    const fontSize = isSelected ? 13 : 12;
+    ctx.font = `${isSelected ? "bold" : "600"} ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    const textWidth = ctx.measureText(label).width;
+    const px = 10, py = 7, r = 8;
+    const w = textWidth + px * 2;
+    const h = fontSize + py * 2;
+    const x = nx - w / 2;
+    const y = ny - h / 2;
+    const colors = POS_FILL[pos] ?? { fill: "#f3f4f6", border: "#d1d5db", text: "#374151" };
+
+    if (isSelected) { ctx.shadowColor = "rgba(59,130,246,0.5)"; ctx.shadowBlur = 16; }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fillStyle = colors.fill; ctx.fill();
+    ctx.strokeStyle = isSelected ? "#3b82f6" : colors.border;
+    ctx.lineWidth = isSelected ? 2.5 : 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = colors.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(label, nx, ny);
+  }, [selectedId]);
+
+  const nodePointerAreaPaint = useCallback((raw: FGNode, color: string, ctx: CanvasRenderingContext2D) => {
+    const nx = raw.x ?? 0; const ny = raw.y ?? 0;
+    ctx.font = "12px sans-serif";
+    const tw = ctx.measureText(String(raw.word ?? "")).width;
+    ctx.fillStyle = color;
+    ctx.fillRect(nx - tw / 2 - 10, ny - 13, tw + 20, 26);
+  }, []);
 
   const handleDelete = async (senseId: string) => {
     setDeletingId(senseId);
@@ -174,78 +191,46 @@ export default function VocabularyPage() {
         ) : words.length === 0 ? (
           <EmptyState />
         ) : view === "graph" ? (
-          <div className="flex-1 flex flex-col p-5 gap-4 overflow-hidden">
-            {/* 그래프 */}
-            <div className="flex-1 flex items-center justify-center min-h-0">
-              <div className="relative w-full" style={{ maxWidth: W, aspectRatio: `${W} / ${H}` }}>
-
-                {/* SVG 엣지 */}
-                <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${W} ${H}`}>
-                  {/* 점선: 포지션은 있지만 실제 관계 없는 filler 노드 */}
-                  {effectiveSelected && Object.keys(positions)
-                    .filter((id) => id !== effectiveSelected && !connectedIds.has(id))
-                    .map((id) => {
-                      const sp = positions[effectiveSelected];
-                      const tp = positions[id];
-                      if (!sp || !tp) return null;
-                      return (
-                        <line key={id} x1={sp.x} y1={sp.y} x2={tp.x} y2={tp.y}
-                          stroke="#E5E7EB" strokeWidth="1.5" strokeDasharray="5 4" />
-                      );
-                    })}
-                  {/* 실선: 실제 관계 링크 */}
-                  {links.map((link, i) => {
-                    const sp = positions[link.source];
-                    const tp = positions[link.target];
-                    if (!sp || !tp) return null;
-                    const mx = (sp.x + tp.x) / 2;
-                    const my = (sp.y + tp.y) / 2;
-                    const color = LINK_COLOR[link.type] ?? "#D1D5DB";
-                    return (
-                      <g key={i}>
-                        <line x1={sp.x} y1={sp.y} x2={tp.x} y2={tp.y} stroke={color} strokeWidth="2" />
-                        <rect x={mx - 18} y={my - 10} width={36} height={14} rx={6} fill="white" fillOpacity={0.85} />
-                        <text x={mx} y={my} textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="#6b7280">
-                          {LINK_LABEL[link.type] ?? link.type}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                {/* 노드 */}
-                {words.map((word) => {
-                  const pos = positions[word.senseId];
-                  if (!pos) return null;
-                  const c = posColor(word.pos);
-                  const isSelected = word.senseId === effectiveSelected;
-                  return (
-                    <button
-                      key={word.senseId}
-                      onClick={() => setSelectedId(word.senseId)}
-                      className={`absolute flex flex-col items-center gap-0.5 rounded-2xl border-2 transition-all
-                        ${c.bg} ${c.border}
-                        ${isSelected ? "px-5 py-2.5 shadow-lg ring-2 ring-offset-1 ring-blue-400 z-20" : "px-3 py-1.5 shadow-sm hover:shadow-md z-10"}`}
-                      style={{
-                        left: `${(pos.x / W) * 100}%`,
-                        top: `${(pos.y / H) * 100}%`,
-                        transform: "translate(-50%, -50%)",
-                        minWidth: isSelected ? 80 : 60,
-                      }}
-                    >
-                      <span className={`font-bold whitespace-nowrap ${c.text} ${isSelected ? "text-sm" : "text-xs"}`}>
-                        {word.word}
-                      </span>
-                      <span className="text-[9px] text-gray-400">{word.pos}</span>
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* 포스 그래프 */}
+            <div ref={graphContainerRef} className="flex-1 min-h-0 cursor-grab active:cursor-grabbing">
+              <ForceGraph2D
+                graphData={graphData}
+                width={graphSize.width}
+                height={graphSize.height}
+                nodeLabel=""
+                nodeCanvasObject={nodeCanvasObject}
+                nodeCanvasObjectMode={() => "replace"}
+                nodePointerAreaPaint={nodePointerAreaPaint}
+                linkColor={(link) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB"}
+                linkWidth={2}
+                linkCurvature={0.1}
+                linkCanvasObjectMode={() => "after"}
+                linkCanvasObject={(link, ctx) => {
+                  const l = link as FGNode & { source?: FGNode; target?: FGNode };
+                  const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
+                  const tx = l.target?.x ?? 0; const ty = l.target?.y ?? 0;
+                  if (!sx && !tx) return;
+                  const mx = (sx + tx) / 2; const my = (sy + ty) / 2;
+                  const label = LINK_LABEL[String(l.type ?? "")] ?? String(l.type ?? "");
+                  ctx.font = "9px sans-serif";
+                  const tw = ctx.measureText(label).width; const pad = 4;
+                  ctx.fillStyle = "rgba(255,255,255,0.88)";
+                  ctx.fillRect(mx - tw / 2 - pad, my - 7, tw + pad * 2, 13);
+                  ctx.fillStyle = "#9ca3af"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                  ctx.fillText(label, mx, my);
+                }}
+                onNodeClick={(node) => setSelectedId(String((node as FGNode).id ?? ""))}
+                backgroundColor="transparent"
+                d3AlphaDecay={0.015}
+                d3VelocityDecay={0.25}
+                cooldownTicks={150}
+              />
             </div>
 
             {/* 선택 단어 정의 */}
             {selectedWord && (
-              <div className="flex-shrink-0 bg-[#F9FFF4] border border-[#D1FAC0] rounded-2xl px-5 py-3 flex items-start justify-between gap-3">
+              <div className="flex-shrink-0 bg-[#F9FFF4] border-t border-[#D1FAC0] px-5 py-3 flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="font-bold text-gray-800 text-base">{selectedWord.word}</span>
@@ -284,10 +269,10 @@ export default function VocabularyPage() {
             )}
 
             {/* 범례 */}
-            <div className="flex-shrink-0 flex gap-3 flex-wrap items-center">
-              {Object.entries(POS_COLOR).map(([pos, c]) => (
+            <div className="flex-shrink-0 flex gap-3 flex-wrap items-center px-5 py-2.5 border-t border-gray-100">
+              {Object.entries(POS_FILL).map(([pos, c]) => (
                 <div key={pos} className="flex items-center gap-1">
-                  <div className={`w-2.5 h-2.5 rounded-full ${c.bg} border ${c.border}`} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.fill, border: `1.5px solid ${c.border}` }} />
                   <span className="text-xs text-gray-500">{pos}</span>
                 </div>
               ))}
