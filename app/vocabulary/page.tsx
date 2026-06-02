@@ -60,6 +60,8 @@ export default function VocabularyPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
   const graphContainerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fgRef = useRef<any>(null);
   const [graphSize, setGraphSize] = useState({ width: 800, height: 500 });
 
   const { data, isLoading } = useQuery({ queryKey: ["graph"], queryFn: api.getGraph });
@@ -82,6 +84,13 @@ export default function VocabularyPage() {
     nodes: words.map((w) => ({ ...w, id: w.senseId })),
     links: links.map((l) => ({ source: l.source, target: l.target, type: l.type })),
   }), [words, links]);
+
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    fg.d3Force("charge").strength(-400);
+    fg.d3Force("link").distance(120);
+  }, [graphData]);
 
   const selectedWord = useMemo(() => words.find((w) => w.senseId === selectedId) ?? null, [words, selectedId]);
 
@@ -195,6 +204,7 @@ export default function VocabularyPage() {
             {/* 포스 그래프 */}
             <div ref={graphContainerRef} className="flex-1 min-h-0 cursor-grab active:cursor-grabbing">
               <ForceGraph2D
+                ref={fgRef}
                 graphData={graphData}
                 width={graphSize.width}
                 height={graphSize.height}
