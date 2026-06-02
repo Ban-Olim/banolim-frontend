@@ -62,7 +62,7 @@ export default function VocabularyPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
   const graphContainerRef = useRef<HTMLDivElement>(null);
-  const [graphSize, setGraphSize] = useState({ width: 0, height: 0 });
+  const [graphSize, setGraphSize] = useState({ width: 800, height: 500 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
   const forcesSet = useRef(false);
@@ -76,10 +76,12 @@ export default function VocabularyPage() {
   useEffect(() => {
     const el = graphContainerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      setGraphSize({ width, height });
-    });
+    const measure = () => {
+      const { clientWidth: w, clientHeight: h } = el;
+      if (w > 0 && h > 0) setGraphSize({ width: w, height: h });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -215,7 +217,7 @@ export default function VocabularyPage() {
         ) : view === "graph" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             <div ref={graphContainerRef} className="flex-1 min-h-0 w-full cursor-grab active:cursor-grabbing">
-              {graphSize.width > 0 && <ForceGraph2D
+              <ForceGraph2D
                 ref={fgRef}
                 graphData={graphData}
                 width={graphSize.width}
@@ -251,7 +253,7 @@ export default function VocabularyPage() {
                 backgroundColor="transparent"
                 d3AlphaDecay={0.02}
                 d3VelocityDecay={0.3}
-              />}
+              />
             </div>
 
             {selectedWord && (
