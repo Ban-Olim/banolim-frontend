@@ -62,9 +62,12 @@ export default function VocabularyPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
   const graphContainerRef = useRef<HTMLDivElement>(null);
-  const [graphSize, setGraphSize] = useState({ width: 800, height: 500 });
+  const [graphSize, setGraphSize] = useState({ width: 0, height: 0 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
+  const forcesSet = useRef(false);
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedId;
 
   const { data, isLoading } = useQuery({ queryKey: ["graph"], queryFn: api.getGraph });
   const words: GraphWord[] = useMemo(() => data?.words ?? [], [data]);
@@ -81,10 +84,12 @@ export default function VocabularyPage() {
     return () => ro.disconnect();
   }, []);
 
-  // force 설정 — 매 렌더마다 시도하다가 ref 준비되면 적용
+  // force 설정 — ref 준비되면 딱 한 번만 적용
   useEffect(() => {
+    if (forcesSet.current) return;
     const fg = fgRef.current;
     if (!fg) return;
+    forcesSet.current = true;
     fg.d3Force("charge").strength(-600);
     fg.d3Force("link").distance(130).strength(0.25);
     fg.d3ReheatSimulation();
@@ -115,14 +120,13 @@ export default function VocabularyPage() {
 
   const selectedWord = useMemo(() => words.find((w) => w.senseId === selectedId) ?? null, [words, selectedId]);
 
-  // 원형 노드 + 아래 텍스트
+  // 원형 노드 + 아래 텍스트 (selectedIdRef 사용 → 클릭해도 그래프 재초기화 없음)
   const nodeCanvasObject = useCallback((raw: FGNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const nx = raw.x ?? 0;
     const ny = raw.y ?? 0;
-    const id = String(raw.id ?? "");
     const label = String(raw.word ?? "");
     const pos = String(raw.pos ?? "");
-    const isSelected = id === selectedId;
+    const isSelected = String(raw.id ?? "") === selectedIdRef.current;
     const r = isSelected ? NODE_R * 1.25 : NODE_R;
     const c = POS_HEX[pos] ?? { fill: "#f3f4f6", stroke: "#d1d5db", text: "#374151" };
 
@@ -142,7 +146,7 @@ export default function VocabularyPage() {
     ctx.textBaseline = "top";
     ctx.fillStyle = c.text;
     ctx.fillText(label, nx, ny + r + 3 / globalScale);
-  }, [selectedId]);
+  }, []);
 
   const nodePointerAreaPaint = useCallback((raw: FGNode, color: string, ctx: CanvasRenderingContext2D) => {
     const nx = raw.x ?? 0;
@@ -210,8 +214,8 @@ export default function VocabularyPage() {
           <EmptyState />
         ) : view === "graph" ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div ref={graphContainerRef} className="flex-1 min-h-0 cursor-grab active:cursor-grabbing">
-              <ForceGraph2D
+            <div ref={graphContainerRef} className="flex-1 min-h-0 w-full cursor-grab active:cursor-grabbing">
+              {graphSize.width > 0 && <ForceGraph2D
                 ref={fgRef}
                 graphData={graphData}
                 width={graphSize.width}
@@ -247,7 +251,7 @@ export default function VocabularyPage() {
                 backgroundColor="transparent"
                 d3AlphaDecay={0.02}
                 d3VelocityDecay={0.3}
-              />
+              />}
             </div>
 
             {selectedWord && (
