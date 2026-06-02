@@ -62,7 +62,7 @@ export default function VocabularyPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [view, setView] = useState<"graph" | "list">("graph");
   const graphContainerRef = useRef<HTMLDivElement>(null);
-  const [graphSize, setGraphSize] = useState({ width: 800, height: 500 });
+  const [graphSize, setGraphSize] = useState<{ width: number; height: number } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
   const forcesSet = useRef(false);
@@ -163,6 +163,36 @@ export default function VocabularyPage() {
     ctx.fill();
   }, []);
 
+  const nodeCanvasObjectMode = useCallback(() => "replace" as const, []);
+  const linkCanvasObjectMode = useCallback(() => "after" as const, []);
+  const getLinkColor = useCallback(
+    (link: object) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB",
+    [],
+  );
+  const onNodeClick = useCallback(
+    (node: object) => setSelectedId(String((node as FGNode).id ?? "")),
+    [],
+  );
+  const linkCanvasObject = useCallback((link: object, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const l = link as FGNode & { source?: FGNode; target?: FGNode };
+    const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
+    const tx = l.target?.x ?? 0; const ty = l.target?.y ?? 0;
+    if (!sx && !tx) return;
+    const mx = (sx + tx) / 2; const my = (sy + ty) / 2;
+    const label = LINK_LABEL[String(l.type ?? "")] ?? "";
+    if (!label) return;
+    const fontSize = Math.max(9 / globalScale, 2);
+    ctx.font = `${fontSize}px sans-serif`;
+    const tw = ctx.measureText(label).width;
+    const pad = 3 / globalScale;
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillRect(mx - tw / 2 - pad, my - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
+    ctx.fillStyle = "#9ca3af";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, mx, my);
+  }, []);
+
   const handleDelete = async (senseId: string) => {
     setDeletingId(senseId);
     try {
@@ -183,7 +213,7 @@ export default function VocabularyPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col overflow-hidden"
+      className="h-screen flex flex-col overflow-hidden"
       style={{ backgroundImage: "url('/vocabulary_bg.png')", backgroundSize: "cover", backgroundPosition: "center" }}
     >
       <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md m-3 rounded-3xl shadow-sm">
@@ -223,43 +253,25 @@ export default function VocabularyPage() {
             {/* 그래프 + 정보 패널 오버레이 */}
             <div className="flex-1 relative min-h-0">
               <div ref={graphContainerRef} className="absolute inset-0 cursor-grab active:cursor-grabbing">
-                <ForceGraph2D
+                {graphSize && <ForceGraph2D
                   ref={fgRef}
                   graphData={graphData}
                   width={graphSize.width}
                   height={graphSize.height}
                   nodeLabel=""
                   nodeCanvasObject={nodeCanvasObject}
-                  nodeCanvasObjectMode={() => "replace"}
+                  nodeCanvasObjectMode={nodeCanvasObjectMode}
                   nodePointerAreaPaint={nodePointerAreaPaint}
-                  linkColor={(link) => LINK_COLOR[String((link as FGNode).type ?? "")] ?? "#D1D5DB"}
+                  linkColor={getLinkColor}
                   linkWidth={1.5}
                   linkCurvature={0.05}
-                  linkCanvasObjectMode={() => "after"}
-                  linkCanvasObject={(link, ctx, globalScale) => {
-                    const l = link as FGNode & { source?: FGNode; target?: FGNode };
-                    const sx = l.source?.x ?? 0; const sy = l.source?.y ?? 0;
-                    const tx = l.target?.x ?? 0; const ty = l.target?.y ?? 0;
-                    if (!sx && !tx) return;
-                    const mx = (sx + tx) / 2; const my = (sy + ty) / 2;
-                    const label = LINK_LABEL[String(l.type ?? "")] ?? "";
-                    if (!label) return;
-                    const fontSize = Math.max(9 / globalScale, 2);
-                    ctx.font = `${fontSize}px sans-serif`;
-                    const tw = ctx.measureText(label).width;
-                    const pad = 3 / globalScale;
-                    ctx.fillStyle = "rgba(255,255,255,0.88)";
-                    ctx.fillRect(mx - tw / 2 - pad, my - fontSize / 2 - pad, tw + pad * 2, fontSize + pad * 2);
-                    ctx.fillStyle = "#9ca3af";
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillText(label, mx, my);
-                  }}
-                  onNodeClick={(node) => setSelectedId(String((node as FGNode).id ?? ""))}
+                  linkCanvasObjectMode={linkCanvasObjectMode}
+                  linkCanvasObject={linkCanvasObject}
+                  onNodeClick={onNodeClick}
                   backgroundColor="transparent"
                   d3AlphaDecay={0.02}
                   d3VelocityDecay={0.3}
-                />
+                />}
               </div>
 
               {/* 선택 단어 패널 — 그래프 위에 오버레이 (캔버스 크기 변화 없음) */}
