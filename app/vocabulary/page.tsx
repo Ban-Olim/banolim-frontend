@@ -73,21 +73,26 @@ export default function VocabularyPage() {
   const words: GraphWord[] = useMemo(() => data?.words ?? [], [data]);
   const links: GraphLink[] = useMemo(() => data?.links ?? [], [data]);
 
-  const measureGraph = useCallback(() => {
-    const el = graphContainerRef.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) setGraphSize({ width: Math.floor(width), height: Math.floor(height) });
-  }, []);
-
+  // rAF로 브라우저 페인트 이후 측정 → 새로고침/네비게이션 모두 안정적
   useEffect(() => {
-    const el = graphContainerRef.current;
-    if (!el) return;
-    measureGraph();
-    const ro = new ResizeObserver(measureGraph);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [measureGraph]);
+    const measure = () => {
+      const el = graphContainerRef.current;
+      if (!el) return;
+      const { width, height } = el.getBoundingClientRect();
+      if (width > 0 && height > 0) {
+        setGraphSize((prev) => {
+          if (prev && Math.abs(prev.width - width) < 5 && Math.abs(prev.height - height) < 5) return prev;
+          return { width: Math.floor(width), height: Math.floor(height) };
+        });
+      }
+    };
+    const raf = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   // force 설정 — ref 준비되면 딱 한 번만 적용
   useEffect(() => {
