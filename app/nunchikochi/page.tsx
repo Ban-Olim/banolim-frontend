@@ -94,7 +94,6 @@ export default function NunchikochePage() {
   const [characterDetails, setCharacterDetails] = useState<
     Record<number, CharacterDetail>
   >({});
-  const [scoreDiff, setScoreDiff] = useState<number | null>(null);
   const prevMoodRef = useRef<number>(30);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -112,15 +111,8 @@ export default function NunchikochePage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // 점수 변화 감지 (메시지 응답 후에만)
   useEffect(() => {
-    const diff = moodPercent - prevMoodRef.current;
     prevMoodRef.current = moodPercent;
-    if (diff > 0) {
-      setScoreDiff(diff);
-      const t = setTimeout(() => setScoreDiff(null), 1500);
-      return () => clearTimeout(t);
-    }
   }, [moodPercent]);
 
   // 카드 열릴 때 캐릭터 상세 조회
@@ -251,23 +243,6 @@ export default function NunchikochePage() {
       >
         <BackgroundDecorations />
 
-        {/* 점수 표시: 뷰포트 고정 → 스크롤해도 항상 상단에 */}
-        <AnimatePresence>
-          {scoreDiff !== null && (
-            <motion.div
-              key={String(moodPercent)}
-              initial={{ opacity: 0, y: -8, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.85 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="fixed top-5 left-0 right-0 z-50 flex justify-center pointer-events-none"
-            >
-              <span className="bg-[#18181b] text-white text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg">
-                +{scoreDiff}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <PageHeader title="눈치코치" onClose={() => setView("selection")} />
 
