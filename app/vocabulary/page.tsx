@@ -71,7 +71,7 @@ export default function VocabularyPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [view, setView] = useState<"graph" | "list">("graph");
+  const [view, setView] = useState<"graph" | "list">("list");
   const [graphSize, setGraphSize] = useState<{ width: number; height: number } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
