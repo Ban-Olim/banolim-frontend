@@ -94,6 +94,7 @@ export default function DashboardPage() {
     const [settingsError, setSettingsError] = useState("");
     const [myProfile, setMyProfile] = useState<{ nickname: string; age: number } | null>(null);
 
+    // 컴포넌트 마운트 시 사용자 프로필(닉네임, 나이) 정보 로드 및 상태 저장.
     useEffect(() => {
         api.getProfile()
             .then(data => {
@@ -109,6 +110,7 @@ export default function DashboardPage() {
             .catch(error => console.error("Failed to fetch profile on mount:", error));
     }, []);
 
+    // 설정 모달창 열기 및 프로필 정보 셋팅.
     const openSettings = async () => {
         setIsSettingsOpen(true);
         setSettingsError("");
@@ -133,6 +135,7 @@ export default function DashboardPage() {
         }
     };
 
+    // 닉네임/나이 유효성 검사 후 프로필 업데이트 및 볼륨 설정 로컬스토리지 저장.
     const saveSettings = async () => {
         const trimmedNickname = settingsNickname.trim();
         const isNicknameValid = trimmedNickname.length >= 1 && trimmedNickname.length <= 10;
@@ -163,6 +166,7 @@ export default function DashboardPage() {
         }
     };
 
+    // 컴포넌트 마운트 시 로컬스토리지의 볼륨 설정 로드.
     useEffect(() => {
         const bgmVol = localStorage.getItem("bgmVolume");
         if (bgmVol) setBgmVolume(Number(bgmVol));
@@ -170,6 +174,7 @@ export default function DashboardPage() {
         if (sfxVol) setSfxVolume(Number(sfxVol));
     }, []);
 
+    // 컴포넌트 마운트 시 대시보드 메인 데이터(등급, 오답 노트, 채팅 세션) 로드.
     useEffect(() => {
         api.getUserLevel()
             .then(data => {
@@ -187,13 +192,13 @@ export default function DashboardPage() {
             .then(data => {
                 const res: any = data;
                 console.log("[오답노트] 1. raw data:", JSON.stringify(res));
-                // request()가 isSuccess+data 래퍼를 벗겨서 SentenceAttemptListRes { attempts: [...] } 를 반환함
+
                 let attemptsArray: any[] = [];
                 if (res) {
                     if (Array.isArray(res)) {
                         attemptsArray = res;
                     } else if (res.attempts && Array.isArray(res.attempts)) {
-                        attemptsArray = res.attempts; // 올바른 경로: SentenceAttemptListRes.attempts
+                        attemptsArray = res.attempts;
                     } else if (res.data && Array.isArray(res.data)) {
                         attemptsArray = res.data;
                     } else if (res.content && Array.isArray(res.content)) {
@@ -206,10 +211,10 @@ export default function DashboardPage() {
                 }
                 console.log("[오답노트] attemptsArray:", attemptsArray.length, "items", attemptsArray[0]);
 
-                // AttemptList 스펙: { sentenceAttemptId, sentenceText, attemptCount, submittedAt }
-                // problemId 기준으로 중복 제거 후 오답노트 목록 구성 (상세는 클릭 시 로드)
+
                 const seen = new Set<number>();
                 const normalized = attemptsArray
+                    .filter((item: any) => item.isCorrect === false || item.correct === false) // 오답만 필터링
                     .map((item: any, idx: number) => {
                         // sentenceAttemptId는 시도 ID, problemId는 문제 ID (상세 조회 시 사용)
                         const id = item.sentenceProblemId ?? item.problemId ?? item.sentenceAttemptId ?? item.id ?? idx;
@@ -256,6 +261,7 @@ export default function DashboardPage() {
 
     }, []);
 
+    // 선택된 연/월 변경 시 출석 기록 로드 및 당일 자동 출석 체크.
     useEffect(() => {
         api.getAttendanceStamps(selectedYear, selectedMonth)
             .then(data => {
@@ -340,7 +346,7 @@ export default function DashboardPage() {
                     api.checkAttendance()
                         .then(() => {
                             setIsCheckedInToday(true);
-                            // Fallback, update UI manually so the stamp shows
+
                             const today = new Date();
                             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                             setAttendanceDates(prev => [...prev, todayStr]);
@@ -350,6 +356,7 @@ export default function DashboardPage() {
             });
     }, [selectedYear, selectedMonth]);
 
+    // 채팅 세션 클릭 시 전체 대화 내역 로드 및 채팅 모달 오픈.
     const handleChatClick = async (session: ChatLog) => {
         try {
             const logData = await api.getChatLog(session.id);
@@ -382,6 +389,7 @@ export default function DashboardPage() {
         }
     };
 
+    // 오답 노트 클릭 시 단어 조합 시도 내역 로드 및 모달 오픈.
     const handleNoteClick = async (note: IncorrectNote) => {
         try {
             const detail = await api.getSentenceAttemptDetail(note.id);
@@ -427,12 +435,12 @@ export default function DashboardPage() {
     const currentLevel = myLevel;
     const displayLevel = clickedLevel !== null ? clickedLevel : currentLevel;
 
-    // Use actual attendance dates from API depending on selected Year/Month
+
     const attendanceDays = attendanceDates
         .filter(d => d !== null && d !== undefined)
         .map(d => {
             if (!isNaN(Number(d)) && Number(d) > 0 && Number(d) <= 31) {
-                return Number(d); // e.g. [8, 9] from backend
+                return Number(d);
             }
 
             const str = String(d);
@@ -454,6 +462,7 @@ export default function DashboardPage() {
         })
         .filter(d => d !== -1);
 
+    // 수동 '오늘 출석하기' 클릭 시 출석 체크 API 호출.
     const handleCheckIn = async () => {
         if (isCheckedInToday) return;
         try {
@@ -468,6 +477,7 @@ export default function DashboardPage() {
         }
     };
 
+    // 선택된 연/월 기준 달력 UI용 35칸 배열(5주) 생성 및 반환.
     const getCalendarDays = (year: number, month: number) => {
         const firstDay = new Date(year, month - 1, 1).getDay();
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -688,7 +698,7 @@ export default function DashboardPage() {
                             )}
                         </div>
                         <div className="flex gap-2 mb-6">
-                            <span className="bg-[#FFE4E6] text-[#EF4444] text-[10px] font-bold px-3 py-1.5 rounded-full border border-[#FECDD3]">연속 {myConsecutiveDays}일 🔥</span>
+
                             {isCheckedInToday ? (
                                 <span className="bg-[#FEF9C3] border border-[#FDE047] text-[#D97706] text-[10px] font-bold px-3 py-1.5 rounded-full">
                                     오늘 출석 완료!
