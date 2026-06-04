@@ -230,27 +230,27 @@ export default function DashboardPage() {
                         seen.add(note.id);
                         return true;
                     });
-
-                // 오답(틀린 내역)만 필터링하기 위해 각 문제의 상세 내역을 조회하여 isCorrect가 false인 시도가 있는지 확인합니다.
-                Promise.all(
-                    normalized.map(async (note: any) => {
+                // 오답(틀린 내역)만 필터링하기 위해 순차적으로 상세 내역을 조회 (한꺼번에 요청 시 브라우저 멈춤 방지)
+                setIncorrectNotes([]); // 초기화
+                (async () => {
+                    for (const note of normalized) {
                         try {
                             const detail = await api.getSentenceAttemptDetail(note.id);
                             const attemptsList = detail?.details || detail?.attempts || [];
+
                             // 상세 내역 중 한 번이라도 틀린 적이 있는지(isCorrect === false) 확인
                             const hasIncorrect = attemptsList.some((att: any) => att.isCorrect === false);
-                            return { note, hasIncorrect };
+
+                            if (hasIncorrect) {
+                                setIncorrectNotes(prev => [...prev, note]);
+                            }
                         } catch (error) {
-                            console.error("Failed to fetch detail for filter", error);
-                            // 에러 발생 시 일단 표시
-                            return { note, hasIncorrect: true };
+                            console.error("Failed to fetch detail for note id", note.id, error);
+                            // 에러 발생 시 누락 방지를 위해 일단 목록에 추가
+                            setIncorrectNotes(prev => [...prev, note]);
                         }
-                    })
-                ).then(results => {
-                    const finalNotes = results.filter(res => res.hasIncorrect).map(res => res.note);
-                    console.log("[오답노트] filtered finalNotes:", finalNotes.length, "items");
-                    setIncorrectNotes(finalNotes);
-                });
+                    }
+                })();
             })
             .catch(error => {
                 console.error("[오답노트] FETCH ERROR:", error);
